@@ -1,6 +1,6 @@
 # Dashboard tablet dock design
 
-Status: Draft for user review. This records the agreed concept, not a validated mechanical design or authorization to manufacture.
+Status: Approved design brief. This records the agreed concept, not a validated mechanical design or authorization to manufacture.
 
 ## Purpose and scope
 
@@ -37,7 +37,7 @@ A low, rigid bridge supports one central mast and two standard tape feet. Each f
 
 Foot adjustment addresses slope. Conformable tape may accommodate minor surface irregularities; it must not be used to bridge substantial gaps. Footprint, spacing, and joint geometry must be developed around sufficient adhesive contact and rigidity. The final foot design must be checked on representative dashboard surfaces before making broad compatibility claims.
 
-If a surface cannot provide adequate contact, evaluate another mounting position or revise the standard base geometry. Do not introduce a custom contoured foot as the default solution. Strong curvature, soft surfaces, and unsuitable finishes can remain compatibility limits.
+If a surface cannot provide adequate contact, evaluate another mounting position or revise the standard base geometry. Do not introduce a custom contoured foot as the default solution. Strong curvature, soft surfaces, and unsuitable finishes can remain compatibility limits. Any position must also not block the driver's view of the road and must avoid airbag covers and deployment paths; check the vehicle's documentation.
 
 ### Central mast and pitch joint
 
@@ -49,7 +49,7 @@ Use metal bolts and captive nuts for structural adjustment clamps. Route wiring 
 
 ### Cradle and automatic retention
 
-The cradle supports the tablet on shaped contact surfaces and guides its lateral travel. A left-side retaining lip prevents the left edge from moving outward while docked. A light automatic detent resists unintended leftward sliding while allowing deliberate removal.
+The cradle supports the tablet on shaped contact surfaces and guides its lateral travel. A left-side retaining lip prevents the left edge from moving outward while docked. A light automatic detent resists unintended leftward sliding while allowing deliberate removal. While docked, the cradle, not gravity or the USB-C plug, must stop the tablet lifting under road shocks. Any upward capture must release through the slide and tilt, so the final removal step remains a free lift.
 
 Removal sequence:
 
@@ -90,7 +90,7 @@ Keep the mast, bridge, fasteners, and wiring behind the display where practical.
 
 ## Reference dimensions and evidence
 
-- Samsung's nominal bare-tablet envelope is 253.8 × 165.3 × 6.3 mm. Measure camera protrusion, port location, edge profiles, and control clearances separately. [Samsung specifications](https://www.samsung.com/hk_en/business/tablets/galaxy-tab-s/galaxy-tab-s7-lte-t875-sm-t875nzketgy/)
+- Samsung's nominal bare-tablet envelope is 253.8 × 165.3 × 6.3 mm, and the SM-T875 weighs 500 g. Measure camera position and protrusion, port location, speaker and microphone openings, edge profiles, and control clearances separately. [Samsung specifications](https://www.samsung.com/hk_en/business/tablets/galaxy-tab-s/galaxy-tab-s7-lte-t875-sm-t875nzketgy/)
 - CableCreation's dimension image specifies a body approximately 49.3 × 12.7 × 8.9 mm, converted from 1.94 × 0.50 × 0.35 inches. It is thicker than the tablet. These are reference dimensions, not fitted-pocket tolerances. [Dimension image](https://cdn.shopify.com/s/files/1/0592/1521/6811/products/usbcto3.5mmaudio_4.jpg?v=1664431874)
 - [CableCreation product](https://www.cablecreation.com/products/2-in-1-usb-c-to-3-5mm-headphone-audio-adapter)
 - [Essager product](https://www.essager3c.com/products/essager-100w-usb-c-to-c-fast-charging-phone-laptop-cable-with-led-power-display-%E5%89%AF%E6%9C%AC-1)
@@ -107,9 +107,9 @@ First print small connector-fit, slide, detent, and joint samples. Final parts r
 ## Required evidence before final manufacturing
 
 1. **Tablet and connectors:** actual dimensions, plug alignment, insertion/extraction travel, cable diameters, and clearance around assembled connectors. Check audio and charging operation with the actual tablet and power source.
-2. **Installation envelope:** available space above the W124 center vents, minimum tablet height, full tilt/removal clearance, camera view, and access to nearby vehicle functions. These checks inform placement and standard-part design, not a custom dashboard contour.
+2. **Installation envelope:** available space above the W124 center vents, minimum tablet height, nominal screen pitch for the occupants' eye positions, the driver's forward view at the chosen height and pitch, full tilt/removal clearance, camera view, and access to nearby vehicle functions. These checks inform placement and standard-part design, not a custom dashboard contour.
 3. **Standard base:** representative dashboard contact checks across slopes and curvatures; locked joints must not rock. Insufficient contact is a failed fit, not permission to fill gaps with extra tape.
-4. **Cradle prototype:** repeatable installation/removal in the specified sequence, no forced port misalignment, no unintended tilt while connected, and usable detent force.
+4. **Cradle prototype:** repeatable installation/removal in the specified sequence, no forced port misalignment, no unintended tilt or lift while connected, and usable detent force.
 5. **Structural testing:** tablet-equivalent load at full height and pitch extremes, followed by vibration and warm-condition tests. Check cracks, creep, loosened joints, adjustment drift, detent release, and adhesive lifting. Begin retention testing with a dummy mass before using the tablet on-road.
 6. **Road-use checks:** no unintended release or unplugging, no rattling or sustained screen wobble after bumps, and acceptable recorded road footage. Evaluate screen movement and camera footage separately. If the central support fails, identify whether the mast, cradle, base joint, adhesive, or dashboard is moving before choosing twin supports.
 7. **Adhesive qualification:** select tape for the actual surface and loading, verify full contact, and test bonding/removal compatibility on a suitable representative surface. Preserve the no-damage requirement; do not silently add abrasion or permanent surface treatment. [3M design guide](https://multimedia.3m.com/mws/media/1400379O/3m-vhb-tape-design-guide.pdf)
@@ -120,4 +120,4 @@ No adjustable articulated arm, powered mechanism, separate release button, case-
 
 ## Review boundary
 
-This document consolidates the agreed concept and identifies the evidence needed to turn it into printable geometry. It does not claim completed CAD, universal dashboard compatibility, damage-free adhesive removal, or qualified thermal/vibration performance. After user review of this written spec, prepare an implementation plan that starts with the unresolved geometry and small fit/mechanism prototypes.
+This document consolidates the agreed concept and identifies the evidence needed to turn it into printable geometry. It does not claim completed CAD, universal dashboard compatibility, damage-free adhesive removal, or qualified thermal/vibration performance. Crash retention is not designed or tested; in a collision the tablet or dock may detach and strike occupants. After user review of this written spec, prepare an implementation plan that starts with the unresolved geometry and small fit/mechanism prototypes.
