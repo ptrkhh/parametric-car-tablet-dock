@@ -6,10 +6,12 @@ All values are mm, degrees, or grams. This is a geometric prototype, not fitted 
 |---|---|---|
 | Tablet width, height, thickness | 253.8, 165.3, 6.3 | Samsung nominal specification in design brief |
 | Tablet mass | 500 g | Samsung nominal specification |
-| Corner radius | 8, provisional | Modelling assumption, measure before printing |
+| Corner radius | 8, provisional | Modelling assumption, measure before printing; also sets the detent contact |
 | Rail clearance | 0.5, provisional | Fit sample required |
 | Release travel | 8, provisional | Must exceed actual USB engagement plus clearance; not the stated protrusion |
 | Release yaw | 12°, provisional | Mechanism development choice |
+| Detent preload / rise | 1, 1.5, provisional | Tune on the motion sample; preload must keep the tablet against the cradle stops |
+| Pitch tooth flank gap | 0.3°, provisional | Joint coupon and service resolution |
 | Camera location/protrusion/FOV | Unmeasured | Tablet and actual recording mode required |
 | USB centre and engagement | Unmeasured | Tablet and both actual connectors required |
 | Button, speaker, microphone positions | Unmeasured | Tablet measurements required |

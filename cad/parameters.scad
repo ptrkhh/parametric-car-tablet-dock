@@ -20,6 +20,8 @@ $fn = 32;
 back_y = 36;
 wall = 4;
 plug_engagement = 6;
+detent_preload = 1; // cone apex interference with the docked corner arc
+detent_rise = 1.5; // apex height above the tablet bottom = tongue deflection while sliding
 // Unmeasured feature locations and connector seated transforms: fit samples only.
 camera_x = -110;
 camera_z = 62;
@@ -35,6 +37,7 @@ m3_nut_depth = 2.7;
 height_travel = 50;
 pitch_limit = 15;
 pitch_step = 5;
+tooth_gap = 0.3; // degrees between mating tooth flanks; tune on the joint coupon
 hinge_y = 65;
 base_z = 45;
 bottom_height = 70;
@@ -48,6 +51,7 @@ m5_head_d = 8.5;
 m5_head_h = 5;
 cable_d = 5; // assumed cable diameter; actual plug/strain relief may be larger
 // Identical standard feet; these settings change their installation angles only.
+// [left,right] degrees: pitch about X (fore/aft slope), roll about Y (side-to-side slope).
 foot_pitch = [0,0];
 foot_roll = [0,0];
 foot_angle_limit = 15;

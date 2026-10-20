@@ -76,18 +76,25 @@ class GeometryTests(ScadCase):
 class MotionTests(ScadCase):
     def test_slide_then_yaw_then_lift_clearance(self):
         self.assert_empty(self.check('slide_then_yaw_then_lift_clearance'))
-        self.assert_empty(self.check('slide_then_yaw_then_lift_clearance', tablet_w=100, tablet_h=60, corner_r=5, sample_fixture=True))
+        self.assert_empty(self.check('slide_then_yaw_then_lift_clearance', tablet_w=100, tablet_h=60, sample_fixture=True))
 
     def test_connected_yaw_is_blocked(self):
-        for slide in (0, 3, 5.9):
-            with self.subTest(slide=slide):
-                self.assert_solid(self.check('connected_yaw_is_blocked', probe_slide=slide))
+        for fraction in (0, 0.5, 1):
+            with self.subTest(fraction_of_plug_engagement=fraction):
+                self.assert_solid(self.check('connected_yaw_is_blocked', probe_fraction=fraction))
 
     def test_docked_lift_is_blocked(self):
         self.assert_solid(self.check('docked_lift_is_blocked'))
 
     def test_docked_left_edge_outward_is_blocked(self):
         self.assert_solid(self.check('docked_left_edge_outward_is_blocked'))
+
+    def test_detent_engages_when_docked(self):
+        self.assert_solid(self.check('detent_engages_when_docked'))
+
+    def test_detent_only_deflects_down(self):
+        self.assert_empty(self.check('detent_only_deflects_down'))
+        self.assert_empty(self.check('detent_only_deflects_down', tablet_w=100, tablet_h=60))
 
     def test_renderer_classification(self):
         fixtures = [('cube(2);', 'solid'),
@@ -157,10 +164,15 @@ class SupportTests(ScadCase):
         for pitch in range(-15,16,5):
             self.assert_empty(self.check('pitch_mating_clearance',pitch_deg=pitch))
 
+    def test_pitch_off_index_is_blocked(self):
+        for sign in (-1,1):
+            with self.subTest(sign=sign):
+                self.assert_solid(self.check('pitch_off_index_is_blocked',probe_sign=sign))
+
 
 class BaseTests(ScadCase):
     def test_two_axis_foot_adjustment(self):
-        for pitch,roll in (([0,0],[0,0]),([15,-15],[-15,15]),([15,-15],[15,-15]),([-15,15],[-15,15]),([-15,15],[15,-15])):
+        for roll,pitch in (([0,0],[0,0]),([15,-15],[-15,15]),([15,-15],[15,-15]),([-15,15],[-15,15]),([-15,15],[15,-15])):
             with self.subTest(foot_pitch=pitch,foot_roll=roll):
                 self.assert_empty(self.check('two_axis_foot_adjustment',foot_pitch=pitch,foot_roll=roll))
         code,log,_=render(part='reference',foot_pitch=[16,0])
@@ -168,12 +180,12 @@ class BaseTests(ScadCase):
         self.assertIn('foot angle',log)
 
     def test_foot_clamps_have_tool_access(self):
-        self.assert_empty(self.check('foot_clamps_have_tool_access',foot_pitch=[15,-15],foot_roll=[-15,15]))
+        self.assert_empty(self.check('foot_clamps_have_tool_access',foot_roll=[15,-15],foot_pitch=[-15,15]))
 
     def test_base_clears_removal_envelope(self):
         for height in (0,25,50):
             for pitch in (-15,0,15):
-                self.assert_empty(self.check('base_clears_removal_envelope',height_mm=height,pitch_deg=pitch,foot_pitch=[15,-15],foot_roll=[-15,15]))
+                self.assert_empty(self.check('base_clears_removal_envelope',height_mm=height,pitch_deg=pitch,foot_roll=[15,-15],foot_pitch=[-15,15]))
 
     def test_curved_surface_has_gap(self):
         self.assert_solid(self.check('curved_surface_has_gap'))
@@ -205,9 +217,10 @@ class HandoffTests(ScadCase):
 
     def test_unsafe_parameters_rejected(self):
         for values in ({'clearance':-0.1},{'insert_clearance':-0.1},{'slide_gap':-0.1},
-                       {'inner_length':50},{'camera_half_angle':95}):
+                       {'inner_length':50},{'camera_half_angle':95},{'plug_engagement':7.6},
+                       {'part':'motion_sample','clearance':0.8}):
             with self.subTest(**values):
-                code,log,_=render(part='reference',**values)
+                code,log,_=render(**{'part':'reference',**values})
                 self.assertNotEqual(code,0,log)
                 self.assertIn('Assertion',log)
 

@@ -15,7 +15,7 @@ The approved [design](docs/superpowers/specs/2026-10-19-tablet-dock-design.md), 
 
 ## Preview and export
 
-Run from this worktree, using WSL Python and OpenSCAD:
+Run from the repository root, using WSL Python and OpenSCAD:
 
 ```bash
 python3 -m unittest discover -s tests -v
@@ -28,7 +28,7 @@ A successful exit alone is insufficient: reject any `WARNING`, `EXPORT-WARNING` 
 
 Set `part="assembly"` for the assembled view. Example settings are `height_mm=50`, `pitch_deg=15`, `slide_mm=8`, `release_yaw_deg=12` and `lift_mm=0`. Removal controls are animation inputs; a render of an arbitrary pose is not proof that the path to it is safe. Coordinates: X occupant-right, Y toward the windshield, Z up. OpenSCAD Front is the occupant view. Positive pitch faces the screen toward the roof.
 
-Change `connector` between `"essager"` and `"cd0700"`. Set feet using `foot_pitch=[left,right]` and `foot_roll=[left,right]`, each within ±15°. These are model limits, not physical hard stops. Changing any geometry requires rerunning the relevant fixtures with those measurements; the suite establishes only its explicitly tested configurations.
+Change `connector` between `"essager"` and `"cd0700"`. Set feet using `foot_pitch=[left,right]` (about X, fore/aft slope) and `foot_roll=[left,right]` (about Y, side-to-side slope), each within ±15°. These are model limits, not physical hard stops. Changing any geometry requires rerunning the relevant fixtures with those measurements; the suite establishes only its explicitly tested configurations.
 
 ## Printable components and coupons
 

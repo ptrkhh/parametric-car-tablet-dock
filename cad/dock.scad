@@ -43,7 +43,8 @@ module box(x0,x1,y0,y1,z0,z1) {
 module cradle_raw(width=tablet_w,height=tablet_h) {
     r=width/2; h=height/2; front=-tablet_t/2-clearance;
     // Back frame and floor; left pocket is open to the inward yaw sweep.
-    box(-r-18,r+5,back_y,back_y+wall,-h-4,-h+6);
+    // Bottom rail stops at the posts: negative pitch swings it back past the mast.
+    for (x=[[-r-18,-0.55*r+5],[0.55*r-5,r+5]]) box(x[0],x[1],back_y,back_y+wall,-h-4,-h+6);
     box(-r-18,r+5,back_y,back_y+wall,h-6,h+4);
     for (x=[-0.55*r,0.55*r]) box(x-5,x+5,back_y,back_y+wall,-h-3,h+3);
     box(-r-18,-r+55,front-3,back_y+wall,-h-4,-h-clearance);
@@ -53,9 +54,9 @@ module cradle_raw(width=tablet_w,height=tablet_h) {
     // Left front lip: outward capture, plus a front-half roof released by inward yaw.
     box(-r-17,-r+4,front-3,front,-h+10,h+4);
     box(-r-17,-r+min(50,r/2),front-3,-0.5,h+clearance,h+4);
-    // Right hooks clear only after full leftward translation.
-    for (z=[-h+10,h-25]) box(r-release_travel+1,r+5,front-3,front,z,z+15);
-    box(r-release_travel+1,r+5,front-3,tablet_t/2+5,h+clearance,h+4);
+    // Right hooks clear only beyond release_travel-clearance, which validate() keeps above plug_engagement.
+    for (z=[-h+10,h-25]) box(r-release_travel+clearance,r+5,front-3,front,z,z+15);
+    box(r-release_travel+clearance,r+5,front-3,tablet_t/2+5,h+clearance,h+4);
     // Central contact is on the outward-moving half, not in the left yaw pocket.
     box(0,25,tablet_t/2+clearance,back_y+wall,-10,10);
     box(-0.6*r,0.6*r,back_y,back_y+wall,-10,10);
@@ -73,8 +74,12 @@ module feature_clearances(width=tablet_w,height=tablet_h) {
         usb_z-connector_window_half_h,usb_z+connector_window_half_h);
 }
 
-module cradle(width=tablet_w,height=tablet_h,device_features=true) {
-    difference() { cradle_raw(width,height); if(device_features) feature_clearances(width,height); }
+module cradle(width=tablet_w,height=tablet_h,device_features=true,radius=corner_r) {
+    difference() {
+        cradle_raw(width,height);
+        if(device_features) feature_clearances(width,height);
+        box(-width/2-14,detent_apex(width,height,radius)[0]+4,-4,4,-height/2-5,-height/2); // detent tongue slot
+    }
 }
 
 // All connector parts stay fixed to the cradle while the tablet translates.
@@ -123,12 +128,19 @@ module connector_cover() {
     }
 }
 
-module detent(width=tablet_w,height=tablet_h) {
-    r=width/2; h=height/2;
-    // shortcut: this long spring is a force-unqualified prototype; tune on an ABS sample.
-    box(-r-2,-r-0.8,-2,2,-h-2,-h+43);
-    translate([-r-0.8,0,-h+42]) rotate([90,0,0])
-        cylinder(h=4,r=1.05,center=true,$fn=16);
+// Floor tongue rooted in the left wall carries a 45-degree cone. Its apex preloads the docked
+// lower-left corner up and right; 45-degree faces turn slide, yaw and install contacts downward.
+// Keep them sloped: a vertical-sided bump would jam the install sweep sideways.
+function detent_apex(width,height,radius) =
+    [-width/2+radius-sqrt(pow(radius-detent_preload,2)-pow(radius-detent_rise,2)),-height/2+detent_rise];
+module detent(width=tablet_w,height=tablet_h,radius=corner_r) {
+    a=detent_apex(width,height,radius); h=height/2; c=a[1]+h+clearance;
+    d=[-width/2+radius-a[0],radius-detent_rise];
+    assert(detent_preload>0 && detent_preload<detent_rise,"detent apex must touch the corner arc");
+    assert(detent_preload>clearance*(d[0]+d[1])/norm(d),"detent must preload the tablet against the cradle stops");
+    // shortcut: force-unqualified spring; tune detent_preload and detent_rise on the ABS motion sample.
+    box(-width/2-15,a[0]+3,-3,3,-h-2.5,-h-clearance);
+    translate([a[0],0,-h-clearance]) cylinder(h=c,r1=c,r2=0,$fn=24);
 }
 
 module screw_x(x,y,z,length,d=m5_clear) {
@@ -161,10 +173,11 @@ module mast_outer() {
 }
 module radial_teeth(x,phase) {
     // shortcut: fine 5-degree teeth need service resolution and load testing.
+    w=pitch_step/2-tooth_gap;
     translate([x,hinge_y,0]) rotate([0,90,0]) linear_extrude(height=1.2)
         for(a=[phase:pitch_step:359]) polygon([
             [12*cos(a),12*sin(a)],[20*cos(a),20*sin(a)],
-            [20*cos(a+2.2),20*sin(a+2.2)],[12*cos(a+2.2),12*sin(a+2.2)]]);
+            [20*cos(a+w),20*sin(a+w)],[12*cos(a+w),12*sin(a+w)]]);
 }
 module mast_inner() {
     slot_top=base_z+75-(tablet_h/2+bottom_height);
@@ -188,7 +201,7 @@ module pitch_joint() {
                 box(x,x+7.5,back_y,hinge_y,-9,9);
             }
             box(-22,22,back_y,back_y+4,-9,9);
-            radial_teeth(13.5,2.5); radial_teeth(-14.7,2.5);
+            radial_teeth(13.5,pitch_step/2); radial_teeth(-14.7,pitch_step/2);
         }
         screw_x(-28,hinge_y,0,56);
         nut_x(17.5,hinge_y,0);
@@ -262,16 +275,16 @@ module bridge() {
     }
 }
 module foot_assembly_pose(i) {
-    translate([(i==0?-1:1)*foot_spacing/2,hinge_y,33]) rotate([0,foot_pitch[i],0])
+    translate([(i==0?-1:1)*foot_spacing/2,hinge_y,33]) rotate([0,foot_roll[i],0])
         translate([0,0,-33]) children();
 }
-module foot_roll_pose(i) {
-    translate([0,0,18]) rotate([foot_roll[i],0,0]) translate([0,0,-18]) children();
+module foot_pitch_pose(i) {
+    translate([0,0,18]) rotate([foot_pitch[i],0,0]) translate([0,0,-18]) children();
 }
 module base_assembly() {
     bridge();
     for(i=[0,1]) foot_assembly_pose(i) {
-        foot_yoke(); foot_roll_pose(i) tape_foot();
+        foot_yoke(); foot_pitch_pose(i) tape_foot();
     }
 }
 
@@ -302,5 +315,5 @@ validate() {
         intersection() { mast_inner(); box(-25,25,40,90,-22,22); }
     if (part == "motion_sample") translate([0,0,back_y+wall]) rotate([-90,0,0])
         union() { cradle(100,60,false); detent(100,60); }
-    if (part == "surrogate") translate([0,0,tablet_t/2]) rotate([90,0,0]) tablet_envelope(0,100,60,5);
+    if (part == "surrogate") translate([0,0,tablet_t/2]) rotate([90,0,0]) tablet_envelope(0,100,60);
 }
