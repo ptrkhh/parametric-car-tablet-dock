@@ -148,5 +148,26 @@ class SupportTests(ScadCase):
             self.assert_empty(self.check('pitch_mating_clearance',pitch_deg=pitch))
 
 
+class BaseTests(ScadCase):
+    def test_two_axis_foot_adjustment(self):
+        for pitch,roll in (([0,0],[0,0]),([15,-15],[-15,15]),([15,-15],[15,-15]),([-15,15],[-15,15]),([-15,15],[15,-15])):
+            with self.subTest(foot_pitch=pitch,foot_roll=roll):
+                self.assert_empty(self.check('two_axis_foot_adjustment',foot_pitch=pitch,foot_roll=roll))
+        code,log,_=render(part='reference',foot_pitch=[16,0])
+        self.assertNotEqual(code,0,log)
+        self.assertIn('foot angle',log)
+
+    def test_foot_clamps_have_tool_access(self):
+        self.assert_empty(self.check('foot_clamps_have_tool_access',foot_pitch=[15,-15],foot_roll=[-15,15]))
+
+    def test_base_clears_removal_envelope(self):
+        for height in (0,25,50):
+            for pitch in (-15,0,15):
+                self.assert_empty(self.check('base_clears_removal_envelope',height_mm=height,pitch_deg=pitch,foot_pitch=[15,-15],foot_roll=[-15,15]))
+
+    def test_curved_surface_has_gap(self):
+        self.assert_solid(self.check('curved_surface_has_gap'))
+
+
 if __name__ == '__main__':
     unittest.main()

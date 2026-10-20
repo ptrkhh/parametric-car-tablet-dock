@@ -47,3 +47,11 @@ m5_nut_depth = 4.4;
 m5_head_d = 8.5;
 m5_head_h = 5;
 cable_d = 5; // assumed cable diameter; actual plug/strain relief may be larger
+// Identical standard feet; these settings change their installation angles only.
+foot_pitch = [0,0];
+foot_roll = [0,0];
+foot_angle_limit = 15;
+foot_spacing = 130;
+foot_w = 70;
+foot_d = 50;
+foot_t = 6;

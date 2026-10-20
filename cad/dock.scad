@@ -4,9 +4,11 @@ module validate() {
     assert(tablet_w > 0 && tablet_h > 0 && tablet_t > 0, "positive tablet dimensions required");
     assert(corner_r > 0 && 2*corner_r < min(tablet_w,tablet_h), "invalid corner radius");
     assert(connector == "essager" || connector == "cd0700", "unknown connector");
-    assert(len(search([part], ["reference","assembly","cradle","motion_sample","surrogate","insert","cover","fit_sample","mast_outer","mast_inner","pitch_joint","slide_sample","joint_rotor"])) > 0 && search([part], ["reference","assembly","cradle","motion_sample","surrogate","insert","cover","fit_sample","mast_outer","mast_inner","pitch_joint","slide_sample","joint_rotor"])[0] != [], "unknown part");
+    assert(len(search([part], ["reference","assembly","cradle","motion_sample","surrogate","insert","cover","fit_sample","mast_outer","mast_inner","pitch_joint","slide_sample","joint_rotor","bridge","foot_yoke","tape_foot"])) > 0 && search([part], ["reference","assembly","cradle","motion_sample","surrogate","insert","cover","fit_sample","mast_outer","mast_inner","pitch_joint","slide_sample","joint_rotor","bridge","foot_yoke","tape_foot"])[0] != [], "unknown part");
     assert(height_mm >= 0 && height_mm <= height_travel && abs(pitch_deg) <= pitch_limit, "adjustment out of range");
     assert(abs(pitch_deg/pitch_step-round(pitch_deg/pitch_step))<0.001,"pitch adjustment uses 5-degree indexes");
+    assert(len(foot_pitch)==2 && len(foot_roll)==2,"two foot angle settings required");
+    for(a=concat(foot_pitch,foot_roll)) assert(abs(a)<=foot_angle_limit,"foot angle out of range");
     assert(release_travel > plug_engagement + clearance,"release travel must exceed plug engagement");
     assert(slide_mm>=0 && release_yaw_deg>=0 && lift_mm>=0,"negative removal control");
     children();
@@ -206,7 +208,66 @@ module dock_head() {
     reference();
 }
 
+module tape_foot() {
+    difference() {
+        union() {
+            linear_extrude(height=foot_t) offset(r=4) square([foot_w-8,foot_d-8],center=true);
+            box(-8,8,-6,6,foot_t,18);
+            screw_x(-8,0,18,16,16);
+        }
+        screw_x(-10,0,18,20);
+    }
+}
+module foot_yoke() {
+    difference() {
+        union() {
+            for(x=[-18,9]) screw_x(x,0,18,9,20);
+            box(-18,18,-5,5,26.5,29);
+            intersection() { screw_y(0,-8,33,16,18); box(-10,10,-9,9,26.5,43); }
+        }
+        screw_x(-22,0,18,44);
+        nut_x(13.5,0,18);
+        screw_y(0,-12,33,24,m5_clear);
+    }
+}
+module bridge() {
+    difference() {
+        union() {
+            box(-foot_spacing/2-12,foot_spacing/2+12,hinge_y-18,hinge_y+18,39,base_z);
+            for(x=[-25,25],y=[hinge_y-10,hinge_y+10])
+                translate([x,y,34]) cylinder(d=14,h=base_z-34);
+            // Side ribs resist bending between the two feet.
+            for(y=[hinge_y-18,hinge_y+14]) box(-foot_spacing/2,foot_spacing/2,y,y+4,35,base_z);
+            for(x=[-foot_spacing/2,foot_spacing/2],y=[hinge_y-18,hinge_y+9])
+                screw_y(x,y,33,9,20);
+        }
+        mast_bolts();
+        for(x=[-25,25],y=[hinge_y-10,hinge_y+10])
+            translate([x,y,33.5]) cylinder(d=m5_nut_af/cos(30),h=m5_nut_depth+0.5,$fn=6);
+        for(x=[-foot_spacing/2,foot_spacing/2]) {
+            screw_y(x,hinge_y-8.5,33,17,19);
+            screw_y(x,hinge_y-23,33,46,m5_clear);
+            translate([x,hinge_y+13.5,33]) rotate([-90,0,0])
+                cylinder(d=m5_nut_af/cos(30),h=m5_nut_depth+1,$fn=6);
+        }
+    }
+}
+module foot_assembly_pose(i) {
+    translate([(i==0?-1:1)*foot_spacing/2,hinge_y,33]) rotate([0,foot_pitch[i],0])
+        translate([0,0,-33]) children();
+}
+module foot_roll_pose(i) {
+    translate([0,0,18]) rotate([foot_roll[i],0,0]) translate([0,0,-18]) children();
+}
+module base_assembly() {
+    bridge();
+    for(i=[0,1]) foot_assembly_pose(i) {
+        foot_yoke(); foot_roll_pose(i) tape_foot();
+    }
+}
+
 module assembly() {
+    color("slategray") base_assembly();
     installed_pose() dock_head();
     color("slategray") mast_outer();
     color("dimgray") translate([0,0,tablet_h/2+bottom_height+height_mm]) mast_inner();
@@ -218,6 +279,9 @@ validate() {
     if (part == "cradle") union() { cradle(); detent(); connector_mount(); pitch_joint(); cable_clip(); }
     if (part == "insert" || part == "fit_sample") connector_insert(connector);
     if (part == "cover") connector_cover();
+    if (part == "bridge") bridge();
+    if (part == "foot_yoke") foot_yoke();
+    if (part == "tape_foot") tape_foot();
     if (part == "mast_outer") mast_outer();
     if (part == "mast_inner") mast_inner();
     if (part == "pitch_joint") pitch_joint();

@@ -35,3 +35,11 @@ The pitch joint has two cheeks, matching 5-degree teeth and a through M5 bolt wi
 Digital tests cover heights 0/25/50 and pitch -15/0/+15, the tablet removal path against the mast, all seven indexed tooth positions, and a generous independent cable corridor. The corridor reserves X=32..56, Y=45..105, Z=65..245 in the installed frame. It does not simulate a cable bending or confirm enough physical slack. Check the actual loop throughout continuous height adjustment and every pitch index, with cables connected but no load on the tablet port.
 
 Export `slide_sample`, `mast_inner`, `pitch_joint` and `joint_rotor` for separate unpowered fit checks. The joint coupon omits the full cradle lever arm. Check bolt insertion, driver access, hex seating, washer bearing, full thread engagement without bottoming, zero cracked layers, smooth sliding, positive tooth engagement and no slip under the later declared load. All physical checks remain UNRUN.
+
+## Standard feet
+
+The same pad and yoke models are used at both ends of the bridge. Set `foot_pitch=[left,right]` and `foot_roll=[left,right]`, with ±15 degrees per axis. These parameters rotate standard parts; they do not generate dashboard contours. Neutral and opposite-corner angle combinations are checked against independently transformed planar contact fixtures, adjacent joint solids and driver-access witnesses. The base is checked against removal at all nine height/pitch combinations.
+
+A separate cylindrical-dashboard fixture (250 mm radius) deliberately leaves a gap under a flat pad edge. Tangency is not full-area contact. Actual dashboard curvature, soft skins, texture, coatings, aged material, tape grade and removal damage remain UNRUN. Reject a placement with incomplete approved contact; do not fill a substantial gap with arbitrary tape stacks. A different location or standard pad concept may be needed if real dashboard geometry falls outside this model.
+
+Fastener access must be checked before tape is applied. Set both foot angles on the actual surface without rocking, then tighten the four pivot clamps. The CAD pose is not a torque or friction rating. Driver sightline, vent access, vehicle functions and airbag clearance remain vehicle-specific checks.

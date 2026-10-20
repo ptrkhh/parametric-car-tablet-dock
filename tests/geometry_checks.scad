@@ -89,3 +89,44 @@ if (check == "pitch_mating_clearance") intersection() {
     mast_inner();
     translate([0,65,0]) rotate([-pitch_deg,0,0]) translate([0,-65,0]) pitch_joint();
 }
+
+module fixture_foot(i) {
+    a=foot_pitch[i]; b=foot_roll[i];
+    translate([i==0 ? -65 : 65,65,33])
+        multmatrix([[cos(a),0,sin(a),0],[0,1,0,0],[-sin(a),0,cos(a),0],[0,0,0,1]])
+        translate([0,0,-15])
+        multmatrix([[1,0,0,0],[0,cos(b),-sin(b),0],[0,sin(b),cos(b),0],[0,0,0,1]])
+        translate([0,0,-18]) children();
+}
+if (check == "two_axis_foot_adjustment") for(i=[0,1]) {
+    difference() {
+        fixture_foot(i) translate([0,0,0.01]) linear_extrude(height=0.1)
+            offset(r=3.5) square([62,42],center=true);
+        foot_assembly_pose(i) foot_roll_pose(i) tape_foot();
+    }
+    intersection() {
+        foot_assembly_pose(i) foot_roll_pose(i) tape_foot();
+        fixture_foot(i) translate([-50,-40,-80]) cube([100,80,79.99]);
+    }
+    intersection() {
+        foot_assembly_pose(i) foot_roll_pose(i) tape_foot();
+        union() { foot_assembly_pose(i) foot_yoke(); bridge(); }
+    }
+    intersection() { foot_assembly_pose(i) foot_yoke(); bridge(); }
+}
+if (check == "foot_clamps_have_tool_access") intersection() {
+    base_assembly();
+    union() {
+        for(i=[0,1]) {
+            foot_assembly_pose(i) translate([-50,0,18]) rotate([0,90,0]) cylinder(d=6,h=25);
+            translate([i==0?-65:65,10,33]) rotate([-90,0,0]) cylinder(d=6,h=30);
+        }
+    }
+}
+if (check == "base_clears_removal_envelope") path_hits()
+    translate([0,65,0]) rotate([pitch_deg,0,0]) translate([0,-65,-tablet_h/2-70-height_mm]) base_assembly();
+if (check == "curved_surface_has_gap") difference() {
+    // An edge patch avoids the zero-area tangent line at the centre.
+    translate([15,-20,-0.1]) cube([15,40,0.1]);
+    translate([0,-40,-250]) rotate([-90,0,0]) cylinder(r=250,h=80,$fn=128);
+}
