@@ -119,5 +119,34 @@ class ConnectorTests(ScadCase):
         self.assert_empty(self.check('device_feature_clearances'))
 
 
+class SupportTests(ScadCase):
+    def test_cradle_is_single_cgal_volume(self):
+        result=render(part='cradle')
+        self.assert_solid(result)
+        self.assertRegex(result[1], r'Volumes:\s+2\b', 'cradle contains disconnected solids or enclosed voids')
+
+    def test_height_and_pitch_limits(self):
+        for height in (0,25,50):
+            for pitch in (-15,0,15):
+                self.assert_solid(render(part='reference', height_mm=height, pitch_deg=pitch))
+        for values in ({'height_mm':-1},{'height_mm':51},{'pitch_deg':-16},{'pitch_deg':16}):
+            code,log,_=render(part='reference', **values)
+            self.assertNotEqual(code,0,log)
+            self.assertIn('adjustment',log)
+
+    def test_slide_overlap_at_max_height(self):
+        self.assert_solid(self.check('slide_overlap_at_max_height'))
+
+    def test_support_and_cable_clearance_at_extremes(self):
+        for height in (0,25,50):
+            for pitch in (-15,0,15):
+                with self.subTest(height=height,pitch=pitch):
+                    self.assert_empty(self.check('support_and_cable_clearance_at_extremes', height_mm=height,pitch_deg=pitch))
+
+    def test_pitch_mating_clearance(self):
+        for pitch in range(-15,16,5):
+            self.assert_empty(self.check('pitch_mating_clearance',pitch_deg=pitch))
+
+
 if __name__ == '__main__':
     unittest.main()

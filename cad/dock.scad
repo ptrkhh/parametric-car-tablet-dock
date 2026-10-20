@@ -4,7 +4,11 @@ module validate() {
     assert(tablet_w > 0 && tablet_h > 0 && tablet_t > 0, "positive tablet dimensions required");
     assert(corner_r > 0 && 2*corner_r < min(tablet_w,tablet_h), "invalid corner radius");
     assert(connector == "essager" || connector == "cd0700", "unknown connector");
-    assert(len(search([part], ["reference","assembly","cradle","motion_sample","surrogate","insert","cover","fit_sample"])) > 0 && search([part], ["reference","assembly","cradle","motion_sample","surrogate","insert","cover","fit_sample"])[0] != [], "unknown part");
+    assert(len(search([part], ["reference","assembly","cradle","motion_sample","surrogate","insert","cover","fit_sample","mast_outer","mast_inner","pitch_joint","slide_sample","joint_rotor"])) > 0 && search([part], ["reference","assembly","cradle","motion_sample","surrogate","insert","cover","fit_sample","mast_outer","mast_inner","pitch_joint","slide_sample","joint_rotor"])[0] != [], "unknown part");
+    assert(height_mm >= 0 && height_mm <= height_travel && abs(pitch_deg) <= pitch_limit, "adjustment out of range");
+    assert(abs(pitch_deg/pitch_step-round(pitch_deg/pitch_step))<0.001,"pitch adjustment uses 5-degree indexes");
+    assert(release_travel > plug_engagement + clearance,"release travel must exceed plug engagement");
+    assert(slide_mm>=0 && release_yaw_deg>=0 && lift_mm>=0,"negative removal control");
     children();
 }
 
@@ -116,20 +120,109 @@ module detent() {
         cylinder(h=4,r=1.05,center=true,$fn=16);
 }
 
-module assembly() {
-    color("slategray") { cradle(); connector_mount(); }
+module screw_x(x,y,z,length,d=m5_clear) {
+    translate([x,y,z]) rotate([0,90,0]) cylinder(d=d,h=length);
+}
+module nut_x(x,y,z) {
+    translate([x,y,z]) rotate([0,90,0]) cylinder(d=m5_nut_af/cos(30),h=m5_nut_depth+1,$fn=6);
+}
+module mast_bolts() {
+    for(x=[-25,25],y=[hinge_y-10,hinge_y+10])
+        translate([x,y,base_z-15]) cylinder(d=m5_clear,h=25);
+}
+module mast_outer() {
+    difference() {
+        union() {
+            box(-19,19,hinge_y-17,hinge_y+17,base_z,base_z+mast_outer_h);
+            box(-30,30,hinge_y-22,hinge_y+22,base_z,base_z+6);
+            for(side=[-1,1]) hull() {
+                translate([side*20,hinge_y,base_z+7]) cube([10,10,2],center=true);
+                translate([side*18,hinge_y,base_z+40]) cube([2,10,2],center=true);
+            }
+            box(-24,24,hinge_y-8,hinge_y+8,base_z+67,base_z+83);
+        }
+        box(-13-slide_gap,13+slide_gap,hinge_y-11-slide_gap,hinge_y+11+slide_gap,base_z-1,base_z+mast_outer_h+1);
+        box(-1,1,hinge_y-18,hinge_y-10,base_z+15,base_z+mast_outer_h+1);
+        screw_x(-30,hinge_y,base_z+75,60);
+        nut_x(19.5,hinge_y,base_z+75);
+        mast_bolts();
+    }
+}
+module radial_teeth(x,phase) {
+    // shortcut: fine 5-degree teeth need service resolution and load testing.
+    translate([x,hinge_y,0]) rotate([0,90,0]) linear_extrude(height=1.2)
+        for(a=[phase:pitch_step:359]) polygon([
+            [12*cos(a),12*sin(a)],[20*cos(a),20*sin(a)],
+            [20*cos(a+2.2),20*sin(a+2.2)],[12*cos(a+2.2),12*sin(a+2.2)]]);
+}
+module mast_inner() {
+    slot_top=base_z+75-(tablet_h/2+bottom_height);
+    difference() {
+        union() {
+            box(-13,13,hinge_y-11,hinge_y+11,-inner_length,-16);
+            screw_x(-13,hinge_y,0,26,40);
+            radial_teeth(13,0); radial_teeth(-14.2,0);
+        }
+        box(-7,7,hinge_y-5,hinge_y+5,-inner_length-1,-25);
+        hull() { screw_x(-16,hinge_y,slot_top,32); screw_x(-16,hinge_y,slot_top-height_travel,32); }
+        screw_x(-20,hinge_y,0,40);
+    }
+}
+module pitch_joint() {
+    difference() {
+        union() {
+            for(side=[-1,1]) {
+                x=side==1 ? 14.5 : -22;
+                screw_x(x,hinge_y,0,7.5,44);
+                box(x,x+7.5,back_y,hinge_y,-9,9);
+            }
+            box(-22,22,back_y,back_y+4,-9,9);
+            radial_teeth(13.5,2.5); radial_teeth(-14.7,2.5);
+        }
+        screw_x(-28,hinge_y,0,56);
+        nut_x(17.5,hinge_y,0);
+    }
+}
+module installed_pose() {
+    translate([0,hinge_y,tablet_h/2+bottom_height+height_mm])
+        rotate([-pitch_deg,0,0]) translate([0,-hinge_y,0]) children();
+}
+module cable_clip() {
+    // Open slot: route already-connected cables behind the cradle.
+    difference() {
+        union() {
+            box(36,50,back_y,back_y+15,-38,-30);
+            box(38,48,back_y,back_y+4,-38,0);
+        }
+        translate([43,back_y+9,-40]) cylinder(d=cable_d+1,h=12);
+        box(40,46,back_y+9,back_y+16,-40,-28);
+    }
+}
+module dock_head() {
+    color("slategray") { cradle(); connector_mount(); pitch_joint(); cable_clip(); }
     color("darkslategray") connector_insert(connector);
     color("slategray") connector_cover();
     color("orange") detent();
     reference();
 }
 
+module assembly() {
+    installed_pose() dock_head();
+    color("slategray") mast_outer();
+    color("dimgray") translate([0,0,tablet_h/2+bottom_height+height_mm]) mast_inner();
+}
+
 validate() {
     if (part == "reference") reference();
     if (part == "assembly") assembly();
-    if (part == "cradle") union() { cradle(); detent(); connector_mount(); }
+    if (part == "cradle") union() { cradle(); detent(); connector_mount(); pitch_joint(); cable_clip(); }
     if (part == "insert" || part == "fit_sample") connector_insert(connector);
     if (part == "cover") connector_cover();
+    if (part == "mast_outer") mast_outer();
+    if (part == "mast_inner") mast_inner();
+    if (part == "pitch_joint") pitch_joint();
+    if (part == "slide_sample") intersection() { mast_outer(); box(-35,35,35,95,base_z+45,base_z+mast_outer_h); }
+    if (part == "joint_rotor") intersection() { mast_inner(); box(-25,25,40,90,-22,22); }
     if (part == "motion_sample") let(tablet_w=100,tablet_h=60,corner_r=5) union() { cradle(); detent(); }
     if (part == "surrogate") let(tablet_w=100,tablet_h=60,corner_r=5) tablet_envelope();
 }

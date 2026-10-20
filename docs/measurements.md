@@ -32,3 +32,11 @@ Base loads include all supported printed hardware, connectors and cables in addi
 Provisional camera centre: X=-110, Z=62, view-cone half-angle 35 degrees. Provisional speaker windows: both side edges at Z=±50; control window: top edge at X=-70. No camera protrusion is included in the bare-body motion envelope yet. Verify the actual camera island, every microphone, button and speaker, then update these references before a full print. Existing openings are design placeholders, not verified feature alignment.
 
 M3 clearance hole 3.4, hex nut pocket 5.8 across flats × 2.7 deep are print allowances for ordinary M3 hardware. Verify the purchased nuts, thread reach, washers and driver access on a coupon.
+
+## Support assumptions and purchased hardware
+
+Nominal tablet bottom is 70 mm above the flat-pad plane at zero pitch and height. This is a modelling starting point, not a measured W124 installation height. The upper pivot is 65 mm behind the tablet centre plane. Outer mast: 85 mm tall from Z=45; inner tongue: 100 mm below its pivot. A 50 mm slide leaves 27.35 mm of overlap at the maximum setting. The slide's 0.3 mm per-side gap needs an ABS coupon.
+
+The proposed M5 socket cap hardware uses nominal 8.5 mm head diameter, 5 mm head height, and 4 mm hex drive; see [Accu's ISO 4762 dimensional example](https://www.accu.co.uk/metric-cap-head-screws/652691-SSC-M5-50-TI5). This is a dimensional reference, not a titanium purchase recommendation. Use ordinary steel/stainless hardware selected with the service. DIN 934 M5 nuts are nominally 8 mm across flats and 4 mm thick; see [manufacturer table](https://www.performancefastenersltd.co.uk/_files/ugd/aa5dc8_659865f859d941c2905d0a253d751077.pdf). Printed pockets are 8.4 AF × 4.4 deep. M5 clearance holes are 5.6 mm. Do not substitute a thicker nut standard without checking.
+
+The cable corridor assumes up to 5 mm cable diameter, a 1 mm diameter allowance in the open clip, and a loose service loop behind the right half of the tablet. Measure bend radius, loop length, strain relief, plug bodies and the available windshield clearance. The free corridor is not a validated routed cable.

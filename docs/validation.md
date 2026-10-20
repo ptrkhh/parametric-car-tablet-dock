@@ -25,3 +25,13 @@ Both inserts fit within a common reference envelope and use the same two M3 atta
 Independent outlet witnesses and the camera/control/speaker reference witnesses do not intersect the model. Both complete connector housings clear the sampled removal path. A separate assumed USB tip has no collision with the tablet at the released slide/yaw poses. These checks use unmeasured seated transforms. They do not establish full electrical seating or zero port stress.
 
 Print `part="fit_sample"` for both connector settings with `insert_clearance` 0.3, 0.5 and 0.7. The small motion sample tests rail fit; use `clearance` 0.3, 0.5 and 0.7 separately. Identify every piece with its clearance. Assemble unpowered first and measure axial alignment, end-stop contact, extraction distance, cable bend and body restraint before charging/audio tests. Any force through the USB port as a tablet stop is a failure. Charging, audio, microphone clearance, real camera view and fit remain UNRUN.
+
+## Central support candidate
+
+The keyed rectangular mast uses a longitudinal M5 slot with 50 mm between end centres and a cross bolt through both outer cheeks. The same bolt clamps the slide and retains it at travel ends. It must remain installed during height adjustment. Four M5 holes attach the mast flange to the bridge. Printed ribs support the flange; metal washers spread fastener loads.
+
+The pitch joint has two cheeks, matching 5-degree teeth and a through M5 bolt with a captive nut. Range is -15 to +15 degrees, at 5-degree indexes. Adjust only unloaded: loosen the bolt, spread the cheeks enough to disengage the teeth, reposition, reseat and tighten. Fine teeth, cheek flex and clamp force need service review and a coupon; the geometry does not establish strength. Do not force the joint across engaged teeth.
+
+Digital tests cover heights 0/25/50 and pitch -15/0/+15, the tablet removal path against the mast, all seven indexed tooth positions, and a generous independent cable corridor. The corridor reserves X=32..56, Y=45..105, Z=65..245 in the installed frame. It does not simulate a cable bending or confirm enough physical slack. Check the actual loop throughout continuous height adjustment and every pitch index, with cables connected but no load on the tablet port.
+
+Export `slide_sample`, `mast_inner`, `pitch_joint` and `joint_rotor` for separate unpowered fit checks. The joint coupon omits the full cradle lever arm. Check bolt insertion, driver access, hex seating, washer bearing, full thread engagement without bottoming, zero cracked layers, smooth sliding, positive tooth engagement and no slip under the later declared load. All physical checks remain UNRUN.

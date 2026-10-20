@@ -16,10 +16,19 @@ module motion() {
     hull() { at_pose(release_travel,release_angle); at_pose(release_travel,release_angle,tablet_h+10); }
 }
 // Distribute intersections over the sweep to avoid unioning 25 overlapping tablets.
+// This conservative box contains every tested tablet pose; clip obstacles first.
+module path_region() {
+    d=tablet_w/2*sin(release_angle)+tablet_t+1;
+    intersection() {
+        children();
+        translate([-tablet_w/2-release_travel-1,-d,-tablet_h/2-1])
+            cube([tablet_w+release_travel+2,2*d,2*tablet_h+12]);
+    }
+}
 module path_hits() {
-    intersection() { children(); hull() { at_pose(); at_pose(release_travel); } }
-    for (a=[0:release_angle/24:release_angle]) intersection() { children(); at_pose(release_travel,a); }
-    intersection() { children(); hull() { at_pose(release_travel,release_angle); at_pose(release_travel,release_angle,tablet_h+10); } }
+    intersection() { path_region() children(); hull() { at_pose(); at_pose(release_travel); } }
+    for (a=[0:release_angle/24:release_angle]) intersection() { path_region() children(); at_pose(release_travel,a); }
+    intersection() { path_region() children(); hull() { at_pose(release_travel,release_angle); at_pose(release_travel,release_angle,tablet_h+10); } }
 }
 if (check == "slide_then_yaw_then_lift_clearance") path_hits() cradle();
 if (check == "connected_yaw_is_blocked") intersection() { cradle(); at_pose(probe_slide,1); }
@@ -51,4 +60,32 @@ if (check == "device_feature_clearances") intersection() {
         for (side=[-1,1],z=[-50,50]) translate([side*tablet_w/2,0,z]) cube([20,6,18],center=true);
         translate([-70,0,tablet_h/2]) cube([35,6,8],center=true);
     }
+}
+
+module support_global() {
+    mast_outer();
+    translate([0,0,tablet_h/2+70+height_mm]) mast_inner();
+}
+// Independent inverse transform puts the stationary mast in tablet coordinates.
+module support_in_tablet() {
+    translate([0,65,0]) rotate([pitch_deg,0,0])
+        translate([0,-65,-tablet_h/2-70-height_mm]) support_global();
+}
+if (check == "slide_overlap_at_max_height") {
+    assert(130-(tablet_h/2+70+50-100)>=25,"retained overlap less than 25 mm");
+    intersection() {
+        translate([0,0,tablet_h/2+70+50]) mast_inner();
+        translate([-30,40,45]) cube([60,50,85]);
+    }
+}
+if (check == "support_and_cable_clearance_at_extremes") {
+    path_hits() { support_in_tablet(); pitch_joint(); cable_clip(); }
+    intersection() {
+        support_global();
+        translate([32,45,65]) cube([24,60,180]);
+    }
+}
+if (check == "pitch_mating_clearance") intersection() {
+    mast_inner();
+    translate([0,65,0]) rotate([-pitch_deg,0,0]) translate([0,-65,0]) pitch_joint();
 }
