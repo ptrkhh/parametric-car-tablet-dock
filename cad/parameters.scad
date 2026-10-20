@@ -55,3 +55,6 @@ foot_spacing = 130;
 foot_w = 70;
 foot_d = 50;
 foot_t = 6;
+// Provisional downstream plug envelope; measure both real cable ends.
+outlet_width = 13; // 12 mm plug witness plus 1 mm total clearance
+connector_window_half_h = 60;

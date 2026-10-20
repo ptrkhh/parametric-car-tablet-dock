@@ -4,20 +4,24 @@ module validate() {
     assert(tablet_w > 0 && tablet_h > 0 && tablet_t > 0, "positive tablet dimensions required");
     assert(corner_r > 0 && 2*corner_r < min(tablet_w,tablet_h), "invalid corner radius");
     assert(connector == "essager" || connector == "cd0700", "unknown connector");
-    assert(len(search([part], ["reference","assembly","cradle","motion_sample","surrogate","insert","cover","fit_sample","mast_outer","mast_inner","pitch_joint","slide_sample","joint_rotor","bridge","foot_yoke","tape_foot"])) > 0 && search([part], ["reference","assembly","cradle","motion_sample","surrogate","insert","cover","fit_sample","mast_outer","mast_inner","pitch_joint","slide_sample","joint_rotor","bridge","foot_yoke","tape_foot"])[0] != [], "unknown part");
+    parts=["reference","assembly","cradle","motion_sample","surrogate","insert","cover","fit_sample","mast_outer","mast_inner","pitch_joint","slide_sample","joint_rotor","bridge","foot_yoke","tape_foot"];
+    assert(search([part],parts)[0] != [], "unknown part");
     assert(height_mm >= 0 && height_mm <= height_travel && abs(pitch_deg) <= pitch_limit, "adjustment out of range");
     assert(abs(pitch_deg/pitch_step-round(pitch_deg/pitch_step))<0.001,"pitch adjustment uses 5-degree indexes");
     assert(len(foot_pitch)==2 && len(foot_roll)==2,"two foot angle settings required");
     for(a=concat(foot_pitch,foot_roll)) assert(abs(a)<=foot_angle_limit,"foot angle out of range");
     assert(release_travel > plug_engagement + clearance,"release travel must exceed plug engagement");
+    assert(clearance>=0 && insert_clearance>=0 && slide_gap>=0,"negative fit clearance");
+    assert(camera_half_angle>0 && camera_half_angle<90,"invalid camera view angle");
+    assert(base_z+mast_outer_h-(tablet_h/2+bottom_height+height_travel-inner_length)>=25,"insufficient mast overlap");
     assert(slide_mm>=0 && release_yaw_deg>=0 && lift_mm>=0,"negative removal control");
     children();
 }
 
-module tablet_envelope(inset=0) {
+module tablet_envelope(inset=0,width=tablet_w,height=tablet_h,radius=corner_r) {
     rotate([90,0,0]) linear_extrude(height=tablet_t-2*inset,center=true)
-        offset(r=corner_r-inset)
-            square([tablet_w-2*corner_r,tablet_h-2*corner_r],center=true);
+        offset(r=radius-inset)
+            square([width-2*radius,height-2*radius],center=true);
 }
 
 module tablet_pose(slide_mm, release_yaw_deg, lift_mm) {
@@ -25,17 +29,19 @@ module tablet_pose(slide_mm, release_yaw_deg, lift_mm) {
 }
 
 module reference() {
-    color("dimgray") tablet_pose(slide_mm,release_yaw_deg,lift_mm) tablet_envelope();
-    // Right-side port marker is visual only, not a retention feature.
-    color("teal") translate([tablet_w/2,0,0]) cube([2,3,8],center=true);
+    tablet_pose(slide_mm,release_yaw_deg,lift_mm) {
+        color("dimgray") tablet_envelope();
+        // Right-side port marker is visual only, not a retention feature.
+        color("teal") translate([tablet_w/2,0,usb_z]) cube([2,3,8],center=true);
+    }
 }
 
 module box(x0,x1,y0,y1,z0,z1) {
     translate([x0,y0,z0]) cube([x1-x0,y1-y0,z1-z0]);
 }
 
-module cradle_raw() {
-    r=tablet_w/2; h=tablet_h/2; front=-tablet_t/2-clearance;
+module cradle_raw(width=tablet_w,height=tablet_h) {
+    r=width/2; h=height/2; front=-tablet_t/2-clearance;
     // Back frame and floor; left pocket is open to the inward yaw sweep.
     box(-r-18,r+5,back_y,back_y+wall,-h-4,-h+6);
     box(-r-18,r+5,back_y,back_y+wall,h-6,h+4);
@@ -55,17 +61,20 @@ module cradle_raw() {
     box(-0.6*r,0.6*r,back_y,back_y+wall,-10,10);
 }
 
-module feature_clearances() {
+module feature_clearances(width=tablet_w,height=tablet_h) {
     translate([camera_x,tablet_t/2,camera_z]) rotate([-90,0,0])
         cylinder(h=75,r1=7,r2=7+75*tan(camera_half_angle));
-    for (side=[-1,1],z=[-50,50]) translate([side*tablet_w/2,0,z])
+    for (side=[-1,1],z=[-50,50]) translate([side*width/2,0,z])
         cube([22,7,20],center=true);
-    translate([-70,0,tablet_h/2]) cube([37,7,10],center=true);
-    translate([tablet_w/2,0,usb_z]) cube([18,12,12],center=true);
+    translate([-70,0,height/2]) cube([37,7,10],center=true);
+    translate([width/2,0,usb_z]) cube([18,12,12],center=true);
+    // Relief includes the seated insert and downstream plugs, not just the USB tip.
+    box(width/2-0.1,width/2+24,-10,7+collision_eps,
+        usb_z-connector_window_half_h,usb_z+connector_window_half_h);
 }
 
-module cradle() {
-    difference() { cradle_raw(); feature_clearances(); }
+module cradle(width=tablet_w,height=tablet_h,device_features=true) {
+    difference() { cradle_raw(width,height); if(device_features) feature_clearances(width,height); }
 }
 
 // All connector parts stay fixed to the cradle while the tablet translates.
@@ -80,22 +89,22 @@ module connector_fasteners(nuts=false) {
     }
 }
 module connector_mount() {
-    difference() {
-        box(tablet_w/2+0.5,tablet_w/2+22,7.5,12,-39,39);
+    translate([0,0,usb_z]) difference() {
+        box(tablet_w/2+0.5,tablet_w/2+22,7,12,-39,39);
         connector_fasteners(true);
     }
 }
 module connector_insert(kind) {
     r=tablet_w/2; b=kind=="cd0700" ? cd0700_body : essager_body;
-    union() {
+    translate([0,0,usb_z]) union() {
     difference() {
-        box(r+0.8,r+20,-6.8,7,-38,38);
+        box(r+0.8,r+20,-7,7,-38,38);
         // Open front allows the fitted body and attached cables to drop in.
         box(r+2-insert_clearance,r+2+b[0]+insert_clearance,-10,b[1]/2+insert_clearance,
             -b[2]/2-insert_clearance,b[2]/2+insert_clearance);
-        box(r-1,r+3,-2,2,usb_z-5,usb_z+5);
+        box(r-1,r+3,-2,2,-5,5);
         for(direction=kind=="cd0700" ? [-1,1] : [-1])
-            translate([r+8,-1,direction*(b[2]/2+20)]) cube([10,16,40],center=true);
+            translate([r+8,-1,direction*(b[2]/2+20)]) cube([outlet_width,16,40],center=true);
         connector_fasteners();
     }
     // Front retaining lips; fit by tilting the body under them before closing the cover.
@@ -105,17 +114,17 @@ module connector_insert(kind) {
 }
 module connector_cover() {
     r=tablet_w/2;
-    difference() {
+    translate([0,0,usb_z]) difference() {
         union() {
             box(r+0.6,r+22,-9,-7,-38,38);
-            box(r+20.5,r+22,-9,12,-38,38);
+            box(r+20.5,r+22,-9,7,-38,38);
         }
         connector_fasteners();
     }
 }
 
-module detent() {
-    r=tablet_w/2; h=tablet_h/2;
+module detent(width=tablet_w,height=tablet_h) {
+    r=width/2; h=height/2;
     // shortcut: this long spring is a force-unqualified prototype; tune on an ABS sample.
     box(-r-2,-r-0.8,-2,2,-h-2,-h+43);
     translate([-r-0.8,0,-h+42]) rotate([90,0,0])
@@ -273,20 +282,25 @@ module assembly() {
     color("dimgray") translate([0,0,tablet_h/2+bottom_height+height_mm]) mast_inner();
 }
 
+// Candidate bed orientations only; the service still selects supports and layer loading.
 validate() {
     if (part == "reference") reference();
     if (part == "assembly") assembly();
-    if (part == "cradle") union() { cradle(); detent(); connector_mount(); pitch_joint(); cable_clip(); }
-    if (part == "insert" || part == "fit_sample") connector_insert(connector);
-    if (part == "cover") connector_cover();
-    if (part == "bridge") bridge();
-    if (part == "foot_yoke") foot_yoke();
+    if (part == "cradle") translate([0,0,hinge_y+22]) rotate([-90,0,0])
+        union() { cradle(); detent(); connector_mount(); pitch_joint(); cable_clip(); }
+    if (part == "insert" || part == "fit_sample") translate([-tablet_w/2-11,0,7]) rotate([-90,0,0]) connector_insert(connector);
+    if (part == "cover") translate([-tablet_w/2-11,0,9]) rotate([90,0,0]) connector_cover();
+    if (part == "bridge") translate([0,hinge_y,base_z]) rotate([180,0,0]) bridge();
+    if (part == "foot_yoke") translate([0,0,18]) rotate([0,90,0]) foot_yoke();
     if (part == "tape_foot") tape_foot();
-    if (part == "mast_outer") mast_outer();
-    if (part == "mast_inner") mast_inner();
-    if (part == "pitch_joint") pitch_joint();
-    if (part == "slide_sample") intersection() { mast_outer(); box(-35,35,35,95,base_z+45,base_z+mast_outer_h); }
-    if (part == "joint_rotor") intersection() { mast_inner(); box(-25,25,40,90,-22,22); }
-    if (part == "motion_sample") let(tablet_w=100,tablet_h=60,corner_r=5) union() { cradle(); detent(); }
-    if (part == "surrogate") let(tablet_w=100,tablet_h=60,corner_r=5) tablet_envelope();
+    if (part == "mast_outer") translate([0,-hinge_y,-base_z]) mast_outer();
+    if (part == "mast_inner") translate([0,-hinge_y,14.2]) rotate([0,90,0]) mast_inner();
+    if (part == "pitch_joint") translate([0,-hinge_y,22]) rotate([0,90,0]) pitch_joint();
+    if (part == "slide_sample") translate([0,-hinge_y,-base_z-45])
+        intersection() { mast_outer(); box(-35,35,35,95,base_z+45,base_z+mast_outer_h); }
+    if (part == "joint_rotor") translate([0,-hinge_y,14.2]) rotate([0,90,0])
+        intersection() { mast_inner(); box(-25,25,40,90,-22,22); }
+    if (part == "motion_sample") translate([0,0,back_y+wall]) rotate([-90,0,0])
+        union() { cradle(100,60,false); detent(100,60); }
+    if (part == "surrogate") translate([0,0,tablet_t/2]) rotate([90,0,0]) tablet_envelope(0,100,60,5);
 }

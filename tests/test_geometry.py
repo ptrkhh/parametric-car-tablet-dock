@@ -21,6 +21,12 @@ def render(source=CAD, **definitions):
         return result.returncode, result.stdout + result.stderr, data
 
 
+
+def stl_bounds(data):
+    vertices=[xyz for row in struct.iter_unpack('<12fH',data[84:])
+              for xyz in (row[3:6],row[6:9],row[9:12])]
+    return [(min(v[i] for v in vertices),max(v[i] for v in vertices)) for i in range(3)]
+
 class ScadCase(unittest.TestCase):
     def assert_solid(self, result):
         code, log, data = result
@@ -70,7 +76,7 @@ class GeometryTests(ScadCase):
 class MotionTests(ScadCase):
     def test_slide_then_yaw_then_lift_clearance(self):
         self.assert_empty(self.check('slide_then_yaw_then_lift_clearance'))
-        self.assert_empty(self.check('slide_then_yaw_then_lift_clearance', tablet_w=100, tablet_h=60, corner_r=5))
+        self.assert_empty(self.check('slide_then_yaw_then_lift_clearance', tablet_w=100, tablet_h=60, corner_r=5, sample_fixture=True))
 
     def test_connected_yaw_is_blocked(self):
         for slide in (0, 3, 5.9):
@@ -102,6 +108,10 @@ class MotionTests(ScadCase):
 
 
 class ConnectorTests(ScadCase):
+    def test_connector_body_is_free(self):
+        for kind in ('essager','cd0700'):
+            self.assert_empty(self.check('connector_body_is_free',connector=kind))
+
     def test_both_insert_interfaces_match(self):
         for kind in ('essager', 'cd0700'):
             self.assert_solid(render(part='insert', connector=kind))
@@ -167,6 +177,52 @@ class BaseTests(ScadCase):
 
     def test_curved_surface_has_gap(self):
         self.assert_solid(self.check('curved_surface_has_gap'))
+
+
+class HandoffTests(ScadCase):
+    def test_all_printable_parts_export(self):
+        parts=('cradle','motion_sample','surrogate','cover','mast_outer','mast_inner',
+               'pitch_joint','slide_sample','joint_rotor','bridge','foot_yoke','tape_foot')
+        configurations=[{'part':part} for part in parts]
+        configurations += [{'part':part,'connector':kind} for part in ('insert','fit_sample') for kind in ('essager','cd0700')]
+        for values in configurations:
+            with self.subTest(**values):
+                result=render(**values)
+                self.assert_solid(result)
+                if 'Volumes:' in result[1]:
+                    self.assertRegex(result[1],r'Volumes:\s+2\b','disconnected solids or enclosed voids require inspection')
+                self.assertAlmostEqual(stl_bounds(result[2])[2][0],0,places=3,msg='candidate print orientation must start at bed Z=0')
+
+    def test_sample_dimensions(self):
+        result=render(part='surrogate')
+        self.assert_solid(result)
+        sizes=sorted(hi-lo for lo,hi in stl_bounds(result[2]))
+        for actual,expected in zip(sizes,[6.3,60,100]):
+            self.assertAlmostEqual(actual,expected,places=3)
+
+    def test_declared_build_volume(self):
+        self.skipTest('Service build volume and slicer review unavailable; no size qualification.')
+
+    def test_unsafe_parameters_rejected(self):
+        for values in ({'clearance':-0.1},{'insert_clearance':-0.1},{'slide_gap':-0.1},
+                       {'inner_length':50},{'camera_half_angle':95}):
+            with self.subTest(**values):
+                code,log,_=render(part='reference',**values)
+                self.assertNotEqual(code,0,log)
+                self.assertIn('Assertion',log)
+
+    def test_connector_offset_tracks_port(self):
+        for kind in ('essager','cd0700'):
+            self.assert_empty(self.check('both_insert_interfaces_match',connector=kind,usb_z=10))
+            self.assert_empty(self.check('cable_outlets_open',connector=kind,usb_z=10))
+
+    def test_port_marker_moves_with_tablet(self):
+        self.assert_empty(self.check('port_marker_moves_with_tablet',slide_mm=8,release_yaw_deg=12))
+
+    def test_unknown_geometry_check_rejected(self):
+        code,log,_=self.check('typo')
+        self.assertNotEqual(code,0)
+        self.assertIn('unknown geometry check',log)
 
 
 if __name__ == '__main__':
