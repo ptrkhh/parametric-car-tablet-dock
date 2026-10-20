@@ -16,3 +16,7 @@ release_angle = 12;
 clearance = 0.5;
 collision_eps = 0.01;
 $fn = 32;
+// Provisional mechanism geometry; rigid body support excludes the flexible detent.
+back_y = 36;
+wall = 4;
+plug_engagement = 6;

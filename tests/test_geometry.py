@@ -21,7 +21,7 @@ def render(source=CAD, **definitions):
         return result.returncode, result.stdout + result.stderr, data
 
 
-class GeometryTests(unittest.TestCase):
+class ScadCase(unittest.TestCase):
     def assert_solid(self, result):
         code, log, data = result
         self.assertEqual(code, 0, log)
@@ -32,6 +32,8 @@ class GeometryTests(unittest.TestCase):
         self.assertGreater(facets, 0, log)
         self.assertEqual(len(data), 84 + 50 * facets, log)
 
+
+class GeometryTests(ScadCase):
     def test_reference_compiles(self):
         self.assert_solid(render(part='reference'))
 
@@ -51,6 +53,51 @@ class GeometryTests(unittest.TestCase):
         code, log, _ = render(connector='missing')
         self.assertNotEqual(code, 0)
         self.assertIn('unknown connector', log)
+
+
+class MotionTests(ScadCase):
+    def assert_empty(self, result):
+        code, log, data = result
+        self.assertNotEqual(code, 0, log)
+        self.assertIn('Current top level object is empty.', log)
+        self.assertNotIn('WARNING', log)
+        self.assertNotIn('ERROR', log)
+        self.assertFalse(data)
+
+    def check(self, name, **definitions):
+        return render(ROOT / 'tests' / 'geometry_checks.scad', check=name, **definitions)
+
+    def test_slide_then_yaw_then_lift_clearance(self):
+        self.assert_empty(self.check('slide_then_yaw_then_lift_clearance'))
+        self.assert_empty(self.check('slide_then_yaw_then_lift_clearance', tablet_w=100, tablet_h=60, corner_r=5))
+
+    def test_connected_yaw_is_blocked(self):
+        for slide in (0, 3, 5.9):
+            with self.subTest(slide=slide):
+                self.assert_solid(self.check('connected_yaw_is_blocked', probe_slide=slide))
+
+    def test_docked_lift_is_blocked(self):
+        self.assert_solid(self.check('docked_lift_is_blocked'))
+
+    def test_docked_left_edge_outward_is_blocked(self):
+        self.assert_solid(self.check('docked_left_edge_outward_is_blocked'))
+
+    def test_renderer_classification(self):
+        fixtures = [('cube(2);', 'solid'),
+                    ('intersection(){cube(2);translate([3,0,0])cube(2);}', 'empty'),
+                    ('not valid scad !!!', 'error'),
+                    ('union(){cube(2);translate([2,2,0])cube(2);}', 'warning')]
+        with tempfile.TemporaryDirectory() as tmp:
+            for source, expected in fixtures:
+                with self.subTest(expected=expected):
+                    path = Path(tmp) / 'fixture.scad'
+                    path.write_text(source)
+                    result = render(path)
+                    if expected == 'solid': self.assert_solid(result)
+                    elif expected == 'empty': self.assert_empty(result)
+                    else:
+                        with self.assertRaises(AssertionError): self.assert_solid(result)
+                        with self.assertRaises(AssertionError): self.assert_empty(result)
 
 
 if __name__ == '__main__':

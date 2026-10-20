@@ -1,3 +1,27 @@
 include <../cad/parameters.scad>
 use <../cad/dock.scad>
 // Spatial fixtures added alongside the mechanism they exercise.
+check = "slide_then_yaw_then_lift_clearance";
+probe_slide = 0;
+
+// Independent reference transform; does not call production tablet_pose().
+module at_pose(s=0,a=0,l=0) {
+    translate([-s,0,l]) multmatrix([
+        [cos(a),sin(a),0,0],[-sin(a),cos(a),0,0],[0,0,1,0],[0,0,0,1]
+    ]) tablet_envelope(collision_eps);
+}
+module motion() {
+    hull() { at_pose(); at_pose(release_travel); }
+    for (a=[0:release_angle/24:release_angle]) at_pose(release_travel,a);
+    hull() { at_pose(release_travel,release_angle); at_pose(release_travel,release_angle,tablet_h+10); }
+}
+// Distribute intersections over the sweep to avoid unioning 25 overlapping tablets.
+module path_hits() {
+    intersection() { children(); hull() { at_pose(); at_pose(release_travel); } }
+    for (a=[0:release_angle/24:release_angle]) intersection() { children(); at_pose(release_travel,a); }
+    intersection() { children(); hull() { at_pose(release_travel,release_angle); at_pose(release_travel,release_angle,tablet_h+10); } }
+}
+if (check == "slide_then_yaw_then_lift_clearance") path_hits() cradle();
+if (check == "connected_yaw_is_blocked") intersection() { cradle(); at_pose(probe_slide,1); }
+if (check == "docked_lift_is_blocked") intersection() { cradle(); at_pose(0,0,2); }
+if (check == "docked_left_edge_outward_is_blocked") intersection() { cradle(); at_pose(0,-1); }
