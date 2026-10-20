@@ -33,6 +33,18 @@ class ScadCase(unittest.TestCase):
         self.assertEqual(len(data), 84 + 50 * facets, log)
 
 
+    def assert_empty(self, result):
+        code, log, data = result
+        self.assertNotEqual(code, 0, log)
+        self.assertIn('Current top level object is empty.', log)
+        self.assertNotIn('WARNING', log)
+        self.assertNotIn('ERROR', log)
+        self.assertFalse(data)
+
+    def check(self, name, **definitions):
+        return render(ROOT / 'tests' / 'geometry_checks.scad', check=name, **definitions)
+
+
 class GeometryTests(ScadCase):
     def test_reference_compiles(self):
         self.assert_solid(render(part='reference'))
@@ -56,17 +68,6 @@ class GeometryTests(ScadCase):
 
 
 class MotionTests(ScadCase):
-    def assert_empty(self, result):
-        code, log, data = result
-        self.assertNotEqual(code, 0, log)
-        self.assertIn('Current top level object is empty.', log)
-        self.assertNotIn('WARNING', log)
-        self.assertNotIn('ERROR', log)
-        self.assertFalse(data)
-
-    def check(self, name, **definitions):
-        return render(ROOT / 'tests' / 'geometry_checks.scad', check=name, **definitions)
-
     def test_slide_then_yaw_then_lift_clearance(self):
         self.assert_empty(self.check('slide_then_yaw_then_lift_clearance'))
         self.assert_empty(self.check('slide_then_yaw_then_lift_clearance', tablet_w=100, tablet_h=60, corner_r=5))
@@ -98,6 +99,24 @@ class MotionTests(ScadCase):
                     else:
                         with self.assertRaises(AssertionError): self.assert_solid(result)
                         with self.assertRaises(AssertionError): self.assert_empty(result)
+
+
+class ConnectorTests(ScadCase):
+    def test_both_insert_interfaces_match(self):
+        for kind in ('essager', 'cd0700'):
+            self.assert_solid(render(part='insert', connector=kind))
+            self.assert_empty(self.check('both_insert_interfaces_match', connector=kind))
+
+    def test_connector_clear_before_yaw(self):
+        for kind in ('essager', 'cd0700'):
+            self.assert_empty(self.check('connector_clear_before_yaw', connector=kind))
+
+    def test_cable_outlets_open(self):
+        for kind in ('essager', 'cd0700'):
+            self.assert_empty(self.check('cable_outlets_open', connector=kind))
+
+    def test_device_feature_clearances(self):
+        self.assert_empty(self.check('device_feature_clearances'))
 
 
 if __name__ == '__main__':

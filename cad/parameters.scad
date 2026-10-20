@@ -20,3 +20,14 @@ $fn = 32;
 back_y = 36;
 wall = 4;
 plug_engagement = 6;
+// Unmeasured feature locations and connector seated transforms: fit samples only.
+camera_x = -110;
+camera_z = 62;
+camera_half_angle = 35;
+usb_z = 0;
+essager_body = [12.7,6.3,16]; // protrusion, thickness, length along tablet edge
+cd0700_body = [12.7,8.9,49.3];
+insert_clearance = 0.5;
+m3_clear = 3.4;
+m3_nut_af = 5.8; // nominal 5.5 AF plus print allowance
+m3_nut_depth = 2.7;

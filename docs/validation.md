@@ -17,3 +17,11 @@ The renderer tests reject parse failures and all WARNING/ERROR diagnostics, incl
 Export `part="motion_sample"` and `part="surrogate"`. The sample uses a 100 × 60 × 6.3 mm dummy with a provisional 5 mm corner radius. It preserves tab overlap and spring geometry but not the full tablet lever arm. Use it to inspect basic release and spring motion before printing the full cradle. It contains no powered connector. Do not force a real tablet into this sample.
 
 Physical checks remain UNRUN: slide force, spring deflection/recovery, automatic reseating, retention under upward/outward load, repeated cycles, actual USB disengagement margin, screen/bezel clearance, and hot ABS creep. Print both pieces, deburr, follow the intended sequence and its reverse, and record interference before changing clearance. Recheck full-size geometry after any change.
+
+## Connector candidate
+
+Both inserts fit within a common reference envelope and use the same two M3 attachment locations at X=tablet_w/2+18, Z=±34. The rear mount is integral to the full cradle; the removable cover approaches from the front. Seat each unpowered body into its insert by tilting under the front retaining lips, then mount the insert and cover. The rear mount has captive hex pockets. The CD0700 exposes both opposed ends; the Essager channel exposes its downward elbow exit. Downstream plug bodies remain outside. Do not force an unknown strain relief under a lip.
+
+Independent outlet witnesses and the camera/control/speaker reference witnesses do not intersect the model. Both complete connector housings clear the sampled removal path. A separate assumed USB tip has no collision with the tablet at the released slide/yaw poses. These checks use unmeasured seated transforms. They do not establish full electrical seating or zero port stress.
+
+Print `part="fit_sample"` for both connector settings with `insert_clearance` 0.3, 0.5 and 0.7. The small motion sample tests rail fit; use `clearance` 0.3, 0.5 and 0.7 separately. Identify every piece with its clearance. Assemble unpowered first and measure axial alignment, end-stop contact, extraction distance, cable bend and body restraint before charging/audio tests. Any force through the USB port as a tablet stop is a failure. Charging, audio, microphone clearance, real camera view and fit remain UNRUN.
