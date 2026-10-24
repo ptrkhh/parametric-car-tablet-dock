@@ -4,6 +4,19 @@ OpenSCAD prototype of a dashboard dock for a bare Samsung Galaxy Tab S7 (SM-T875
 
 **Status: unqualified prototype.** The geometry checks pass for the declared, mostly unmeasured inputs. Nothing has been printed, fitted, loaded, heated, bonded or driven. This is not a production-ready, universal-fit, damage-free-removal, crash-safe or road-qualified design. Crash retention is not designed or tested: in a collision the tablet or dock may detach and strike occupants. See [docs/validation.md](docs/validation.md) for what is and is not established.
 
+## Renderings
+
+OpenSCAD previews of the current model (provisional geometry, nominal tablet), in `docs/images/`.
+
+| | |
+|---|---|
+| ![Occupant view](docs/images/assembly-front.png) Occupant view (Front view), USB-C on the right | ![Front three-quarter view](docs/images/assembly-iso.png) Front three-quarter view |
+| ![Rear view](docs/images/assembly-rear.png) Rear: spine, pitch joint, mast, bridge and feet | ![Standard feet tilted](docs/images/base-feet-tilted.png) Feet at opposite ±15° corners |
+| ![Full height, screen up](docs/images/adjust-high-up.png) Right side: 50 mm height, +15° pitch | ![Zero height, screen down](docs/images/adjust-low-down.png) Right side: 0 mm height, -15° pitch |
+| ![Removal step 1](docs/images/removal-1-slide.png) Removal 1: slide 8 mm left, plug out | ![Removal step 2](docs/images/removal-2-tilt-top.png) Removal 2 (top view): left edge inward 12° |
+| ![Removal step 3](docs/images/removal-3-lift.png) Removal 3: lift clear | ![Motion sample](docs/images/motion-sample.png) Motion sample with its surrogate |
+| ![CD0700 bay exploded](docs/images/connector-bay-cd0700.png) CD0700 insert, cover and rear mount, exploded | ![Essager bay exploded](docs/images/connector-bay-essager.png) Essager insert with its downward cable channel |
+
 ## Files
 
 | Path | Contents |
