@@ -164,6 +164,11 @@ class GeometryTest(unittest.TestCase):
         variants = [{"sample": s, "fraction": f} for s in SIZES for f in (0, 0.5, 1)]
         self.assert_all_blocked("connected_yaw_is_blocked", variants)
 
+    def test_connected_lift_is_blocked(self):
+        # At 0, 50 and 100 % of plug_engagement: no lift, and no 1-degree roll about the left end.
+        variants = [{"sample": s, "fraction": f, "probe": p} for s in SIZES for f in (0, 0.5, 1) for p in (0, 1)]
+        self.assert_all_blocked("connected_lift_is_blocked", variants)
+
     def test_docked_lift_is_blocked(self):
         variants = [{"sample": s, "side": side} for s in SIZES for side in ("left", "right")]
         self.assert_all_blocked("docked_lift_is_blocked", variants)
@@ -195,6 +200,16 @@ class GeometryTest(unittest.TestCase):
     def test_connector_body_captured(self):
         variants = [{"kind": k, "probe": p} for k in KINDS for p in range(6)]
         self.assert_all_blocked("connector_body_captured", variants)
+
+    def test_essager_body_held_in_z(self):
+        self.assert_all_blocked("connector_body_held_in_z", [{"kind": "essager", "probe": p} for p in (0, 1)])
+
+    @unittest.expectedFailure
+    def test_cd0700_body_held_in_z(self):
+        # OPEN GATE (docs/validation.md): the CD0700 outlets are sized for the placeholder
+        # downstream plug bodies, which exceed its end faces, so only the plug shell holds the
+        # body along Z. Remove expectedFailure once measured plugs allow end ledges.
+        self.assert_all_blocked("connector_body_held_in_z", [{"kind": "cd0700", "probe": p} for p in (0, 1)])
 
     def test_connector_clear_before_yaw(self):
         variants = [{"kind": k, "stage": s} for k in KINDS for s in ("slide", "lift")]

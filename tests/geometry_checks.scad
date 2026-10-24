@@ -161,8 +161,10 @@ function yoke_m(s, r) = translation([foot_x(s), foot_y, pivot_b_z]) * rot_y(r) *
 // Dashboard: a 120 mm square slab whose top plane carries the pad, lowered by collision_eps.
 module dash(s, p, r) multmatrix(pad_m(s, p, r)) translate([-60, -60, -20 - collision_eps]) cube([120, 120, 20]);
 module pad_outline() offset(r = pad_r) square([pad[0] - 2 * pad_r, pad[1] - 2 * pad_r], center = true);
-// Within 0.05 mm under the whole pad: lies inside the dashboard only with full flat contact.
-module contact_film(s, p, r) multmatrix(pad_m(s, p, r)) translate([s * pad_offset, 0, -0.3])
+// Films 0.05–0.3 mm below and above the fixture plane over the pad footprint. The lower one
+// must lie inside the dashboard and the upper one inside the CAD pad: together they require
+// the real tape face to sit on the plane with full flat contact.
+module contact_film(s, p, r, z = -0.3) multmatrix(pad_m(s, p, r)) translate([s * pad_offset, 0, z])
     linear_extrude(0.25) offset(delta = -0.2) pad_outline();
 // Feet at test angles: the foot under test gets (fpitch, froll), the other the opposite corner.
 function test_pitch() = foot_side > 0 ? [-fpitch, fpitch] : [fpitch, -fpitch];
@@ -189,6 +191,20 @@ else if (check == "runner_empty") intersection() { cube(1); translate([2, 0, 0])
 else if (check == "slide_then_yaw_then_lift_clearance") intersection() { rigid(); removal(stage); }
 else if (check == "connected_yaw_is_blocked")
     intersection() { rigid(); yawed(probe_yaw) slid(fraction * plug_engagement) body(); }
+else if (check == "connected_lift_is_blocked") {
+    // While the plug is engaged the right end must neither lift (probe 0) nor roll up about
+    // the slid left end once the left roof clearance is taken up (probe 1), on the right half.
+    s = fraction * plug_engagement;
+    px = -w / 2 - s + corner_r;
+    pz = h / 2 + clearance;
+    intersection() {
+        rigid();
+        half("right");
+        if (probe == 0) lifted(probe_lift) slid(s) body();
+        else multmatrix(translation([px, 0, pz]) * rot_y(-probe_yaw) * translation([-px, 0, -pz]))
+            lifted(clearance - collision_eps) slid(s) body();
+    }
+}
 else if (check == "docked_lift_is_blocked")
     intersection() { rigid(); half(side); lifted(probe_lift) body(); }
 else if (check == "docked_left_edge_outward_is_blocked")
@@ -218,6 +234,11 @@ else if (check == "connector_body_captured") {
     intersection() { union() { connector_insert(kind); lid(); }
                      multmatrix(translation(shift)) { body_witness(kind); plug_witness(); } }
 }
+else if (check == "connector_body_held_in_z")
+    // Body alone, without its plug shell: 1 mm along Z (the downstream plug axis) must meet
+    // the insert or cover, or downstream plug forces go through the plug shell into the port.
+    intersection() { union() { connector_insert(kind); lid(); }
+                     multmatrix(translation([0, 0, probe == 0 ? 1 : -1])) body_witness(kind); }
 else if (check == "connector_clear_before_yaw") {
     // The plug is out before the yaw starts; the posed tablet never meets connector hardware.
     intersection() { union() { hardware(kind); if (stage != "slide") plug_witness(); } removal(stage); }
@@ -256,6 +277,7 @@ else if (check == "support_fasteners_clear")
 else if (check == "foot_contact") {
     // The foot under test sits flat on its own tilted plane and nothing of it enters the plane.
     difference() { contact_film(foot_side, fpitch, froll); dash(foot_side, fpitch, froll); }
+    difference() { contact_film(foot_side, fpitch, froll, 0.05); foot(foot_side, fpitch, froll); }
     intersection() { foot(foot_side, fpitch, froll); dash(foot_side, fpitch, froll); }
 }
 else if (check == "curved_dashboard_gap")

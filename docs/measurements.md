@@ -113,11 +113,11 @@ Printed masses are solid ABS volumes from the exported STLs at 1.04 g/cm³, an u
 | M5 and M3 bolts, nuts and washers | 83 |
 | **Total supported by the tape** | **1,106** |
 
-At height 0 and pitch 0 the combined centre of mass is about X=8.5, Y=19.5, Z=119.6 in the installed frame: 9.5 mm behind the pads' front edge and 120 mm above the tape faces. Each 1 g of fore/aft acceleration gives about 1.3 N·m about the tape plane. Height and pitch move this point; the load test must use the measured masses and the worst setting. These numbers are planning inputs, not a load rating.
+At height 0 and pitch 0 the combined centre of mass is about X=8.5, Y=19.5, Z=119.6 in the installed frame: 9.5 mm behind the pads' front edge and 120 mm above the tape faces. Each 1 g of fore/aft acceleration gives about 1.3 N·m about the tape plane. The resultant leaves the pads' footprint at about 0.08 g toward the occupants (ordinary forward acceleration of the car), so the windshield-side pad ends go into peel; the load test must cover that direction. Height and pitch move this point; the load test must use the measured masses and the worst setting. These numbers are planning inputs, not a load rating.
 
 ### Print service
 
-`build_volume` is `[0, 0, 0]`: the service has not supplied its usable ABS volume, so `test_declared_build_volume` is skipped and part fit is unverified. The cradle needs about 290 × 176 mm of bed and 92 mm of height in its candidate orientation; every other part fits a 160 × 75 mm footprint. Enter the volume once known and rerun the suite; split the cradle only if it then fails.
+`build_volume` is `[0, 0, 0]`: the service has not supplied its usable ABS volume, so `test_declared_build_volume` is skipped and part fit is unverified. The cradle needs about 290 × 92 mm of bed and 175 mm of height in its candidate floor-down orientation; every other part fits a 160 × 75 mm footprint. Enter the volume once known and rerun the suite; split the cradle only if it then fails.
 
 ### Cable allowance
 

@@ -113,6 +113,14 @@ module right_hooks(w, h, bay) {
     }
 }
 
+// Roof over the top edge just left of the hooks: upward capture while the plug is still in,
+// where the corner arc has slid out from under the hook roof. It has no front overlap, so the
+// right end swings out beneath it; the yawed tablet lifts clear in front of it.
+module right_roof(w, h) {
+    x0 = w / 2 - corner_r - plug_engagement - 2;
+    box([x0, hook_x(w) + 1], [front_y(), tablet_t / 2 + clearance], [h / 2 + clearance, h / 2 + clearance + wall]);
+}
+
 // Central rear contact (the yaw pivot) and the top-right rear rail, cut by the yaw pocket.
 module back_frame(w, h) {
     difference() {
@@ -434,6 +442,7 @@ module base(fp = foot_pitch, fr = foot_roll) {
 module cradle_rigid(w = tablet_w, h = tablet_h, full = true) {
     left_end(w, h);
     right_hooks(w, h, full);
+    right_roof(w, h);
     back_frame(w, h);
     bottom_rail(w, h);
     if (full) {
@@ -453,7 +462,7 @@ module cradle(w = tablet_w, h = tablet_h, full = true) {
 module fit_sample() {
     intersection() {
         cradle();
-        box([hook_x(tablet_w) - 2, bay_x()[1] + 1], [-50, 50], [bay_z()[0] - 2, tablet_h / 2 + clearance + wall + 1]);
+        box([hook_x(tablet_w) - 2, bay_x()[1] + 1], [-50, 50], [bay_z()[0], tablet_h / 2 + clearance + wall + 1]);
     }
 }
 
@@ -472,24 +481,27 @@ module assembly() {
 
 // Candidate bed orientation: turn, then lift the lowest face to Z=0. Agree with the print service.
 module on_bed(rot, lift) translate([0, 0, lift]) rotate(rot) children();
-front_down = [90, 0, 0];      // cradle family and yoke: their -Y face on the bed
+front_down = [90, 0, 0];      // -Y face on the bed
 right_down = [0, 90, 0];      // +X face on the bed
 left_down = [0, -90, 0];      // -X face on the bed
 
 validate();
 if (part == "reference") tablet_reference();
 else if (part == "assembly") assembly();
-// Lip, hook and floor fronts on the bed; roofs and lug teeth print as walls.
-else if (part == "cradle") on_bed(front_down, wall - front_y()) cradle();
-else if (part == "motion_sample") on_bed(front_down, wall - front_y()) cradle(sample_w, sample_h, false);
-else if (part == "fit_sample") on_bed(front_down, wall - front_y()) fit_sample();
+// Floor down: rear contacts, insert seat and lug teeth print as walls; the detent tongue
+// overhangs its slot, which is open to the bed so its support comes out from below. The
+// roofs over the tablet need support.
+else if (part == "cradle") on_bed([0, 0, 0], tablet_h / 2 + floor_t) cradle();
+else if (part == "motion_sample") on_bed([0, 0, 0], sample_h / 2 + floor_t) cradle(sample_w, sample_h, false);
+else if (part == "fit_sample") on_bed([0, 0, 0], -bay_z()[0]) fit_sample();
 else if (part == "surrogate") on_bed(front_down, tablet_t / 2) tablet_envelope(sample_w, tablet_t, sample_h);
 // Entry side down: pocket, plug hole and outlets print as vertical shafts and slots.
 else if (part == "insert") on_bed(right_down, bay_x()[1]) connector_insert(connector);
 else if (part == "cover") on_bed(right_down, bay_x()[1] + wall) connector_cover();
 else if (part == "mast_outer") on_bed([0, 0, 0], -bridge_top) mast_outer();
-// Toothed faces up: the +X cheek of the inner mast, the +X face of the lug coupon.
-else if (part == "mast_inner") on_bed(right_down, fork_x()[1]) mast_inner(0);
+// Inner mast upright: slide faces and toothed cheek print as walls, like the cradle's lug.
+else if (part == "mast_inner") on_bed([0, 0, 0], tongue_len() - pivot_z(0)) mast_inner(0);
+// Lug coupon with its toothed face up.
 else if (part == "pitch_joint") on_bed(left_down, lug_t / 2) pitch_joint();
 else if (part == "slide_sample") on_bed([0, 0, 0], 30 - clamp_z())
     intersection() { mast_outer(); box([-50, 50], [0, 100], [clamp_z() - 30, sleeve_top() + 1]); }

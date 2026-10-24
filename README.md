@@ -59,16 +59,16 @@ done
 
 | Part | Qty | Size on bed (mm) | Orientation |
 |---|---|---|---|
-| `cradle` | 1 | 288.3 × 174.8 × 91.7 | Front faces down |
+| `cradle` | 1 | 288.3 × 91.6 × 174.8 | Floor down |
 | `insert` (`essager`, `cd0700`) | 1 each | 66.5 × 14.1 × 22.5 | Entry side down |
 | `cover` | 1 | 66.5 × 17.1 × 10.8 | Side plate down |
 | `mast_outer` | 1 | 70.0 × 50.0 × 84.7 | Flange down |
-| `mast_inner` | 1 | 150.6 × 64.0 × 31.2 | Toothed cheek up; the tongue sits 1.2 mm above the bed and needs support |
+| `mast_inner` | 1 | 31.2 × 64.0 × 150.6 | Upright, tongue down; use a brim |
 | `bridge` | 1 | 156.0 × 54.0 × 38.0 | Plate down; the arm bosses need support |
 | `foot_yoke` | 2 | 30.0 × 37.0 × 16.0 | On its side |
 | `tape_foot` | 2 | 50.0 × 70.0 × 27.0 | Tape face down; keep it flat |
 
-The cradle needs a bed of at least about 290 × 176 mm. Do not split it until the service states its usable volume; then choose splits away from the hooks, roofs, detent and lug, and recheck the joint.
+The cradle needs a bed of at least about 290 × 92 mm and 175 mm of height. Do not split it until the service states its usable volume; then choose splits away from the hooks, roofs, detent and lug, and recheck the joint.
 
 Fit and mechanism samples, to print first: `motion_sample` with `surrogate`, `fit_sample` with both inserts and the cover, `slide_sample` with `mast_inner`, and `pitch_joint` (the cradle lug coupon). Variants and procedures are in [docs/validation.md](docs/validation.md).
 
@@ -76,7 +76,8 @@ Fit and mechanism samples, to print first: `motion_sample` with `surrogate`, `fi
 
 - Material: PLA for indoor fit samples only; PETG for mechanism samples; ABS is the proposed final material, subject to the actual filament and to heat testing. Ask for warp control on the large flat parts.
 - Check every STL in the service's slicer for defects, supports and printable features. STL export is not mesh or manufacturing qualification.
-- Weak layer directions to review: the cradle lug web carries the cradle's weight across its layers when printed front-down; the mast sleeve carries the fore/aft moment across its layers when printed upright; the bridge arms bend partly across layers. The face teeth (1.6–2.4 mm pitch, 0.8–1.2 mm deep) are near FDM resolution.
+- Weak layer directions to review: the mast sleeve and tongue carry the fore/aft moment across their layers when printed upright; the bridge arms bend partly across layers. The face teeth (1.6–2.4 mm pitch, 0.8–1.2 mm deep) are near FDM resolution.
+- Supports in these orientations: the cradle's left, right and hook roofs, the top-right rear rail, the lug web and the cable clip need support underneath (the roofs are capture faces; remove scars). The detent tongue overhangs its slot 4 mm above the bed; the slot is open below, so its support comes out from underneath, and the tongue must not fuse to it. The rear-contact faces, insert seat, slide faces and toothed faces print as walls without support.
 - Clearances (0.5 rail, 0.5 insert, 0.3 slide, 0.2 tooth play) are print allowances to tune with the samples.
 
 ## Hardware
@@ -101,7 +102,7 @@ Tape: not selected. Choose the grade with its supplier for the printed surface a
 3. Stand the base on the chosen surface without tape. Set both feet so each pad lies flat with no rocking, then tighten the four pivot bolts. The feet must be set with the cradle off; check driver sightline, vents, controls and airbag covers before going further.
 4. Slide the inner mast into the sleeve and fit the clamp bolt through the slot (it also stops travel; keep it fitted). Set the height and tighten.
 5. Place the cradle lug between the fork cheeks, fit the pitch bolt, choose an index and tighten.
-6. Slide the unpowered connector into its insert from the right, place the insert against the rear mount, plug in the downstream cables through the front outlets, lay the cables in their channels and the cable clip, and fit the cover with two M3 × 25 bolts.
+6. With the tablet removed, slide the unpowered connector into its insert from the right, place the insert against the rear mount, plug in the downstream cables through the front outlets, lay the cables in their channels and the cable clip, and fit the cover with two M3 × 25 bolts.
 7. Only after the fit, load and heat checks in docs/validation.md pass, bond the pads with the selected tape following its surface preparation, pressure and dwell instructions.
 
 **Install the tablet:** place it tilted (left edge inward) into the cradle, press the right edge inward until it is flat against the guides, then slide right to engage USB-C and the detent.
@@ -112,7 +113,9 @@ Tape: not selected. Choose the grade with its supplier for the printed surface a
 
 **Adjust pitch:** unloaded, loosen the pitch bolt, spread the toothed cheek about 1.2 mm so the teeth clear, turn to the next 5° index, reseat and tighten. Never force the joint across engaged teeth.
 
-**Swap connector:** remove the two M3 bolts and the cover, unplug the downstream cables, slide the connector out, fit the other insert and connector, then reassemble as in step 6.
+**CD0700 cables:** plug and unplug its downstream cables only with the tablet removed. Its body is held along that axis only by its own plug shell (an open gate in docs/validation.md), so doing it with the tablet docked loads the tablet's port.
+
+**Swap connector:** with the tablet removed, take out the two M3 bolts and the cover, unplug the downstream cables, slide the connector out, fit the other insert and connector, then reassemble as in step 6.
 
 ## Handoff record
 
