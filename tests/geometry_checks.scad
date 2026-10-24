@@ -147,6 +147,43 @@ module at_clamp_bolt() translate([0, pivot[0], clamp_z()]) children();
 module cable_loop() translate([20, 31, pivot_installed - 25]) cube([8, 10, 30]);
 module cable_corridor() translate([24, 40, bridge_top + flange[2] + 7]) cube([22, 35, pivot_installed - bridge_top - flange[2] - 5]);
 
+// ---- Standard base: feet on independently tilted planar dashboard fixtures ----
+foot_side = 1;    // -1 left, +1 right
+fpitch = 0;       // foot angle about X for the foot under test
+froll = 0;        // foot angle about Y for the foot under test
+function rot_y(a) = [[cos(a), 0, sin(a), 0], [0, 1, 0, 0], [-sin(a), 0, cos(a), 0], [0, 0, 0, 1]];
+function foot_x(s) = s * foot_spacing / 2;
+// Pad frame (pad bottom centre at the origin) to installed: roll about the upper pivot, pitch
+// about the lower pivot.
+function pad_m(s, p, r) = translation([foot_x(s), foot_y, pivot_b_z]) * rot_y(r)
+    * translation([0, 0, pivot_a_z - pivot_b_z]) * rot_x(p) * translation([0, 0, -pivot_a_z]);
+function yoke_m(s, r) = translation([foot_x(s), foot_y, pivot_b_z]) * rot_y(r) * translation([0, 0, -pivot_b_z]);
+// Dashboard: a 120 mm square slab whose top plane carries the pad, lowered by collision_eps.
+module dash(s, p, r) multmatrix(pad_m(s, p, r)) translate([-60, -60, -20 - collision_eps]) cube([120, 120, 20]);
+module pad_outline() offset(r = pad_r) square([pad[0] - 2 * pad_r, pad[1] - 2 * pad_r], center = true);
+// Within 0.05 mm under the whole pad: lies inside the dashboard only with full flat contact.
+module contact_film(s, p, r) multmatrix(pad_m(s, p, r)) translate([s * pad_offset, 0, -0.3])
+    linear_extrude(0.25) offset(delta = -0.2) pad_outline();
+// Feet at test angles: the foot under test gets (fpitch, froll), the other the opposite corner.
+function test_pitch() = foot_side > 0 ? [-fpitch, fpitch] : [fpitch, -fpitch];
+function test_roll() = foot_side > 0 ? [-froll, froll] : [froll, -froll];
+lug_half = foot_lug / 2;
+cheek_out = lug_half + foot_gap + foot_cheek;
+foot_bolt = [-cheek_out, cheek_out, 35];
+// Lower bolt: axis X in the yoke frame, head on the outer side. Upper bolt: axis Y, head at the front.
+module at_lower_bolt(s, r) multmatrix(yoke_m(s, r)) translate([0, 0, pivot_a_z]) rotate([0, 0, s > 0 ? 180 : 0]) children();
+module at_upper_bolt(s) translate([foot_x(s), foot_y, pivot_b_z]) rotate([0, 0, 90]) children();
+// Washers filling the two 1 mm gaps beside a lug.
+// Washers (washer5 thick) against both lug faces; they fit only if each gap is wide enough.
+module gap_washers() for (x = [-lug_half - washer5[1], lug_half])
+    rod_x(x + collision_eps, x + washer5[1] - collision_eps, washer5[0]);
+module foot_hardware(fn) for (s = [-1, 1]) {
+    r = test_roll()[s > 0 ? 1 : 0];
+    at_lower_bolt(s, r) { if (fn == "clear") { bolt_clear(foot_bolt); gap_washers(); } else bolt_bearing(foot_bolt); }
+    at_upper_bolt(s) { if (fn == "clear") { bolt_clear(foot_bolt); gap_washers(); } else bolt_bearing(foot_bolt); }
+}
+module test_base() base(test_pitch(), test_roll());
+
 if (check == "runner_solid") cube(1);
 else if (check == "runner_empty") intersection() { cube(1); translate([2, 0, 0]) cube(1); }
 else if (check == "slide_then_yaw_then_lift_clearance") intersection() { rigid(); removal(stage); }
@@ -216,6 +253,50 @@ else if (check == "support_fasteners_clear")
         union() { at_pitch_bolt() bolt_clear(pitch_bolt); at_clamp_bolt() bolt_clear(clamp_bolt); }
         union() { support(); placed() { rigid(); hardware(kind); } }
     }
+else if (check == "foot_contact") {
+    // The foot under test sits flat on its own tilted plane and nothing of it enters the plane.
+    difference() { contact_film(foot_side, fpitch, froll); dash(foot_side, fpitch, froll); }
+    intersection() { foot(foot_side, fpitch, froll); dash(foot_side, fpitch, froll); }
+}
+else if (check == "curved_dashboard_gap")
+    // A 250 mm radius dashboard (axis X) tangent at the pad centre: the flat pad cannot touch
+    // all of it, so the contact film is not wholly inside.
+    difference() {
+        contact_film(foot_side, 0, 0);
+        translate([foot_x(foot_side), foot_y, -250 - collision_eps]) rotate([0, 90, 0]) cylinder(r = 250, h = 120, center = true, $fn = 360);
+    }
+else if (check == "foot_joints_clear") {
+    // Bridge, yokes and pads never overlap one another at the test angles.
+    for (s = [-1, 1]) {
+        p = test_pitch()[s > 0 ? 1 : 0];
+        r = test_roll()[s > 0 ? 1 : 0];
+        intersection() { bridge(); union() { foot_yoke_at(s, r); tape_foot_at(s, p, r); } }
+        intersection() { foot_yoke_at(s, r); tape_foot_at(s, p, r); }
+    }
+}
+else if (check == "foot_clamps_tool_access")
+    intersection() {
+        foot_hardware("clear");
+        union() {
+            test_base();
+            translate([0, 0, collision_eps]) mast_outer();
+            for (s = [-1, 1]) dash(s, test_pitch()[s > 0 ? 1 : 0], test_roll()[s > 0 ? 1 : 0]);
+        }
+    }
+else if (check == "foot_clamps_bearing") difference() { foot_hardware("bearing"); test_base(); }
+else if (check == "base_clears_removal_envelope") {
+    assert(member(stage, ["slide", "yaw", "lift", "parts"]), str("unknown stage: ", stage));
+    intersection() {
+        test_base();
+        if (stage == "parts") union() {
+            placed() { rigid(); hardware(kind); cable_route(); }
+            translate([0, 0, collision_eps]) support();
+            cable_corridor();
+            cable_loop();
+        }
+        else placed() removal(stage);
+    }
+}
 else if (check == "support_fasteners_bearing")
     difference() {
         union() { at_pitch_bolt() bolt_bearing(pitch_bolt); at_clamp_bolt() bolt_bearing(clamp_bolt); }

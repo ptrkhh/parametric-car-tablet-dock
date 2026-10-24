@@ -91,6 +91,22 @@ min_overlap = 25;          // retained slide overlap at full height
 m5 = [5.6, 8.4, 4.4, 8.5, 5]; // clearance hole, nut pocket across flats, pocket depth, head diameter, head height
 washer5 = [10, 1];         // M5 washer OD, thickness
 
+// ---- Standard base: bridge and two identical tape feet (PROVISIONAL; no dashboard measured) ----
+foot_spacing = 140;        // between the feet's pivot centres (X)
+foot_y = 45;               // feet centre line (installed Y)
+pad = [50, 70, 6];         // flat tape pad X, Y, thickness
+pad_r = 8;                 // pad corner radius
+pad_offset = 10;           // pad centre outboard of its pivots, so a tilted pad passes under the bridge arms
+foot_pitch = [0, 0];       // [left, right] about X; + raises the pad's inward (+Y) edge
+foot_roll = [0, 0];        // [left, right] about Y; + lowers the pad's occupant-right (+X) edge
+foot_range = 15;           // ± per axis
+pivot_a_z = 19;            // lower foot pivot (axis X) above the pad plane
+pivot_b_z = 40;            // upper foot pivot (axis Y) above the pad plane
+foot_lug = 16;             // lug thickness between cheeks
+foot_gap = 1;              // washer gap each side of a lug
+foot_cheek = 6;            // cheek thickness
+bridge = [70, 54, 8];      // plate under the mast flange X, Y, Z; top at bridge_top
+
 // ---- Motion sample: reduced cradle and surrogate with the same retention geometry ----
 sample_w = 100;
 sample_h = 60;

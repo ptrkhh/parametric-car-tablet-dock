@@ -26,6 +26,8 @@ YAW_FRACTIONS = [i / 24 for i in range(25)]
 KINDS = ("essager", "cd0700")
 # Height and pitch extremes plus midpoints.
 POSES = [(hh, pp) for hh in (0, 25, 50) for pp in (-15, 0, 15)]
+# Foot (pitch, roll): neutral and the four corners; the other foot takes the opposite corner.
+FOOT_COMBOS = [(0, 0), (15, 15), (-15, -15), (15, -15), (-15, 15)]
 
 
 class RenderError(AssertionError):
@@ -79,9 +81,19 @@ def render(path, **defines):
     raise RenderError(f"{path.name} {defines}: exit {rc}\n{log[-2000:]}")
 
 
+def workers():
+    # A CGAL render can take several hundred MB; stay inside available memory, not just cores.
+    try:
+        with open("/proc/meminfo") as meminfo:
+            avail_mb = next(int(line.split()[1]) for line in meminfo if line.startswith("MemAvailable")) // 1024
+    except (OSError, StopIteration):
+        avail_mb = 4000
+    return max(1, min(os.cpu_count() or 1, avail_mb // 400))
+
+
 def checks(name, variants):
     """Facet counts of one fixture rendered for each define dict, in parallel."""
-    with ThreadPoolExecutor(max_workers=os.cpu_count()) as pool:
+    with ThreadPoolExecutor(max_workers=workers()) as pool:
         return list(pool.map(lambda d: render(CHECKS, check=name, **d), variants))
 
 
@@ -215,6 +227,36 @@ class GeometryTest(unittest.TestCase):
 
     def test_support_parts_export(self):
         for name in ("mast_outer", "mast_inner", "pitch_joint", "slide_sample"):
+            with self.subTest(part=name):
+                self.assertGreater(render(DOCK, part=name), 0)
+
+    def test_two_axis_foot_adjustment(self):
+        for defines in ({"foot_pitch": [16, 0]}, {"foot_roll": [0, -16]}):
+            with self.subTest(**defines):
+                self.assert_rejected("foot angles out of range", **defines)
+        contact = [{"foot_side": s, "fpitch": p, "froll": r} for s in (-1, 1) for p, r in FOOT_COMBOS]
+        self.assert_all_empty("foot_contact", contact)
+        self.assert_all_empty("foot_joints_clear", [{"fpitch": p, "froll": r} for p, r in FOOT_COMBOS])
+
+    def test_curved_dashboard_breaks_flat_contact(self):
+        # Tangency is not contact: a flat pad on a 250 mm radius leaves a gap at its ends.
+        self.assert_all_blocked("curved_dashboard_gap", [{"foot_side": 1}])
+
+    def test_foot_clamps_have_tool_access(self):
+        self.assert_all_empty("foot_clamps_tool_access", [{"fpitch": p, "froll": r} for p, r in FOOT_COMBOS])
+        self.assert_all_empty("foot_clamps_bearing", [{"fpitch": p, "froll": r} for p, r in FOOT_COMBOS[:2]])
+
+    def test_base_clears_removal_envelope(self):
+        base = [{"height": hh, "pitch": pp, "kind": "cd0700"} for hh, pp in POSES]
+        variants = [dict(v, stage=s) for v in base for s in ("slide", "lift")]
+        variants += [dict(v, stage="yaw", fraction=i / 3) for v in base for i in range(4)]
+        # Height only lifts the cradle away from the base, so parts are checked at height 0.
+        variants += [{"height": 0, "pitch": pp, "kind": "cd0700", "stage": "parts", "fpitch": p, "froll": r}
+                     for pp in (-15, 0, 15) for p, r in FOOT_COMBOS]
+        self.assert_all_empty("base_clears_removal_envelope", variants)
+
+    def test_base_parts_export(self):
+        for name in ("bridge", "foot_yoke", "tape_foot"):
             with self.subTest(part=name):
                 self.assertGreater(render(DOCK, part=name), 0)
 

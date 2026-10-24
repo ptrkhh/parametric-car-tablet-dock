@@ -117,6 +117,23 @@ openscad --hardwarnings --export-format binstl -D 'part="slide_sample"' -o build
 
 Check bolt insertion, hex-key access, nut seating, washer bearing, full thread engagement without bottoming, smooth sliding, positive tooth engagement at every index and no cracked layers. The joint coupon omits the full cradle's lever arm. Physical checks, all UNRUN: clamp holding force, tooth strength and wear, cheek flex, slip under the declared load, cable slack through the full height range at every pitch index with the cables connected and no load on the tablet port.
 
+## Standard feet
+
+Both feet use the same pad (`tape_foot`) and yoke (`foot_yoke`); the left foot is the right one turned 180 degrees. The pad's lug turns about X inside the yoke (lower pivot, fore/aft slope). The yoke turns about Y between two arms of the bridge (upper pivot, side-to-side slope). Set `foot_pitch=[left, right]` and `foot_roll=[left, right]` within ±15 degrees. These angles rotate standard parts; nothing generates a dashboard contour.
+
+| Test | Check |
+|---|---|
+| `test_two_axis_foot_adjustment` | Angles beyond ±15 are rejected. For each foot at neutral and the four corner combinations, a planar fixture built from the fixture's own matrices carries the pad: a 0.25 mm film under the whole pad lies inside the fixture (full flat contact within 0.05 mm) and no part of the foot enters it. A 1-degree mismatch between fixture and foot fails this. Bridge, yokes and pads never overlap, with the other foot at the opposite corner |
+| `test_curved_dashboard_breaks_flat_contact` | On a 250 mm radius dashboard (axis X) tangent at the pad centre, the flat pad's contact film is not wholly inside: about 2.5 mm gap at the pad ends. Tangency is not contact |
+| `test_foot_clamps_have_tool_access` | At the same angle combinations: all four M5 bolts' shanks, head washers, heads, 60 mm hex-key paths, seated nuts and the eight 1 mm gap washers clear every base part, the mast and both dashboard planes; full rings under each washer and nut lie inside material |
+| `test_base_clears_removal_envelope` | At heights 0/25/50 and pitch -15/0/+15 the slide and lift sweeps and 4 yaw poses clear the base. At height 0 (the lowest cradle) and all three pitches, cradle, connector hardware, cable keep-outs and mast clear the base at every foot angle combination |
+
+The tool-access check assumes the cradle is off while the feet are set: stand the base on the surface, set both feet without rocking, tighten the four pivot bolts, then fit the mast, cradle and tape. The bridge sits 10 mm above the pad plane at its centre on a flat surface, and the flange bolt tips 7 mm above it; a dashboard that rises between the feet must not touch them.
+
+The first foot design failed the joint check: at +15/+15 degrees the pad's inner corner rose into the bridge arms. Offsetting the pads 10 mm outboard of their pivots fixed it.
+
+Physical checks, all UNRUN: contact on the real W124 surface and other dashboards (curvature, soft skins, texture, coatings, aged material), rocking after the clamps are tightened, washer friction and bolt torque, hot creep at the pivots, adhesive selection, bond and removal damage, driver sightline, vent and control access, and airbag cover and deployment-path clearance. Reject a placement without full flat contact; do not fill a substantial gap with stacked tape. A different location or pad concept may be needed if the real dashboard falls outside this model.
+
 ## Motion sample
 
 `part="motion_sample"` is `cradle(100, 60)`: the same clearances, hook overlap, roof, lip, pocket angle and detent around a smaller tablet. `part="surrogate"` is the matching 100 × 60 × 6.3 mm dummy with the tablet's provisional `corner_r`, so the detent contact matches the full cradle. The sample does not reproduce the full tablet's lever arm or mass. It contains no connector or device cutouts. Do not force a real tablet into it.

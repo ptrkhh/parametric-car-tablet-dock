@@ -5,7 +5,7 @@
 include <parameters.scad>
 
 parts = ["reference", "assembly", "cradle", "motion_sample", "surrogate", "insert", "cover", "fit_sample",
-         "mast_outer", "mast_inner", "pitch_joint", "slide_sample"];
+         "mast_outer", "mast_inner", "pitch_joint", "slide_sample", "bridge", "foot_yoke", "tape_foot"];
 connectors = ["essager", "cd0700"];
 
 function member(x, list) = len([for (v = list) if (v == x) v]) > 0;
@@ -29,6 +29,7 @@ module validate() {
     assert(pitch_deg % pitch_step == 0 && nominal_pitch % pitch_step == 0,
            "pitch_deg must be a multiple of pitch_step");
     assert(slide_overlap() >= min_overlap, "mast slide overlap below min_overlap at full height");
+    assert(max([for (a = concat(foot_pitch, foot_roll)) abs(a)]) <= foot_range, "foot angles out of range");
 }
 
 // Bare-tablet collision solid: nominal box with rounded outline corners.
@@ -347,6 +348,89 @@ module mast_outer() {
     }
 }
 
+// ---- Standard base: bridge and two identical feet, installed frame ----
+// A pad's lug turns about X (lower pivot) in a yoke; the yoke turns about Y (upper pivot)
+// between two bridge arms. Both feet use the same printed parts, the left one turned 180
+// degrees. Angles change per car; the pads stay flat standard parts.
+function foot_xf(s) = s * foot_spacing / 2;
+function boss_r() = foot_lug / 2;                               // material round each foot bolt
+function cheek_x() = [boss_r() + foot_gap, boss_r() + foot_gap + foot_cheek];
+
+module along_y(y0, y1, r) translate([0, y0, 0]) rotate([-90, 0, 0]) cylinder(r = r, h = y1 - y0);
+
+// Pad frame: pivots above the origin on the pad plane, inner side toward -X.
+module tape_foot() {
+    difference() {
+        union() {
+            translate([pad_offset, 0, 0]) linear_extrude(pad[2])
+                offset(r = pad_r) square([pad[0] - 2 * pad_r, pad[1] - 2 * pad_r], center = true);
+            hull() {
+                box(span(0, boss_r()), span(0, boss_r()), [pad[2] - 0.01, pad[2] + 1]);
+                translate([0, 0, pivot_a_z]) along_x(-boss_r(), boss_r(), boss_r());
+            }
+        }
+        translate([0, 0, pivot_a_z]) along_x(-boss_r() - 1, boss_r() + 1, m5[0] / 2);
+    }
+}
+
+// Pad frame: two cheeks round the pad lug (nut captive in the inner cheek) under a cross
+// block that is the lug of the upper pivot.
+module foot_yoke() {
+    c = cheek_x();
+    difference() {
+        union() {
+            for (x = [c, [-c[1], -c[0]]]) hull() {
+                translate([0, 0, pivot_a_z]) along_x(x[0], x[1], boss_r());
+                box(x, span(0, boss_r()), [pivot_b_z - boss_r(), pivot_b_z - boss_r() + 1]);
+            }
+            box(span(0, c[1]), span(0, boss_r()), span(pivot_b_z, boss_r()));
+        }
+        translate([0, 0, pivot_a_z]) {
+            along_x(-c[1] - 1, c[1] + 1, m5[0] / 2);
+            rotate([0, 0, 180]) nut_pocket(c[1], m5[1], m5[2]);
+        }
+        translate([0, 0, pivot_b_z]) along_y(-boss_r() - 1, boss_r() + 1, m5[0] / 2);
+    }
+}
+
+// Plate under the mast flange (nuts from below) with two arms per side carrying the upper
+// foot pivot; the arms leave the plate low so tilted pads pass beneath them.
+module bridge() {
+    xb = bridge[0] / 2;
+    y0 = pivot[0] - bridge[1] / 2;
+    c = cheek_x();
+    difference() {
+        union() {
+            box(span(0, xb), [y0, y0 + bridge[1]], [bridge_top - bridge[2], bridge_top]);
+            for (s = [-1, 1], ys = [[foot_y + c[0], foot_y + c[1]], [foot_y - c[1], foot_y - c[0]]]) hull() {
+                box(s > 0 ? [xb - 2, xb] : [-xb, -xb + 2], ys, [bridge_top - bridge[2], bridge_top - 4]);
+                translate([foot_xf(s), 0, pivot_b_z]) along_y(ys[0], ys[1], boss_r());
+            }
+        }
+        for (s = [-1, 1]) translate([foot_xf(s), foot_y, pivot_b_z]) {
+            along_y(-c[1] - 1, c[1] + 1, m5[0] / 2);
+            rotate([0, 0, 90]) nut_pocket(c[1], m5[1], m5[2]);
+        }
+        for (sx = [-1, 1], sy = [-1, 1])
+            translate([sx * (flange[0] / 2 - 7), pivot[0] + sy * (flange[1] / 2 - 7), 0]) {
+                cylinder(d = m5[0], h = bridge_top + 1);
+                translate([0, 0, bridge_top - bridge[2] - 1]) cylinder(d = m5[1] / cos(30), h = m5[2] + 1, $fn = 6);
+            }
+    }
+}
+
+module foot_yoke_at(s, fr)
+    translate([foot_xf(s), foot_y, pivot_b_z]) rotate([0, fr, 0]) translate([0, 0, -pivot_b_z])
+        rotate([0, 0, s > 0 ? 0 : 180]) foot_yoke();
+module tape_foot_at(s, fp, fr)
+    translate([foot_xf(s), foot_y, pivot_b_z]) rotate([0, fr, 0]) translate([0, 0, pivot_a_z - pivot_b_z])
+        rotate([fp, 0, 0]) translate([0, 0, -pivot_a_z]) rotate([0, 0, s > 0 ? 0 : 180]) tape_foot();
+module foot(s, fp, fr) { foot_yoke_at(s, fr); tape_foot_at(s, fp, fr); }
+module base(fp = foot_pitch, fr = foot_roll) {
+    bridge();
+    for (i = [0, 1]) foot(2 * i - 1, fp[i], fr[i]);
+}
+
 module cradle_rigid(w = tablet_w, h = tablet_h, full = true) {
     left_end(w, h);
     right_hooks(w, h, full);
@@ -383,6 +467,7 @@ module assembly() {
     }
     color("slategray") mast_outer();
     color("lightslategray") mast_inner(height_mm);
+    color("darkslategray") base();
 }
 
 validate();
@@ -399,3 +484,6 @@ else if (part == "mast_inner") mast_inner(0);
 else if (part == "pitch_joint") pitch_joint();
 else if (part == "slide_sample")
     intersection() { mast_outer(); box([-50, 50], [0, 100], [clamp_z() - 30, sleeve_top() + 1]); }
+else if (part == "bridge") bridge();
+else if (part == "foot_yoke") foot_yoke();
+else if (part == "tape_foot") tape_foot();
