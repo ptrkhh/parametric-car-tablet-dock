@@ -107,6 +107,9 @@ foot_gap = 1;              // washer gap each side of a lug
 foot_cheek = 6;            // cheek thickness
 bridge = [70, 54, 8];      // plate under the mast flange X, Y, Z; top at bridge_top
 
+// ---- Print service ----
+build_volume = [0, 0, 0];  // usable ABS volume X, Y, Z; 0 = not yet supplied, fit unverified
+
 // ---- Motion sample: reduced cradle and surrogate with the same retention geometry ----
 sample_w = 100;
 sample_h = 60;

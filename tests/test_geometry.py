@@ -28,6 +28,11 @@ KINDS = ("essager", "cd0700")
 POSES = [(hh, pp) for hh in (0, 25, 50) for pp in (-15, 0, 15)]
 # Foot (pitch, roll): neutral and the four corners; the other foot takes the opposite corner.
 FOOT_COMBOS = [(0, 0), (15, 15), (-15, -15), (15, -15), (-15, 15)]
+# Every printed piece, in its bed orientation: dock parts and fit/mechanism samples.
+PRINTABLE = [{"part": p} for p in ("cradle", "cover", "mast_outer", "mast_inner", "bridge", "foot_yoke",
+                                   "tape_foot", "motion_sample", "surrogate", "fit_sample", "slide_sample",
+                                   "pitch_joint")]
+PRINTABLE += [{"part": "insert", "connector": k} for k in ("essager", "cd0700")]
 
 
 class RenderError(AssertionError):
@@ -66,8 +71,8 @@ def facet_count(stl):
     return count
 
 
-def render(path, **defines):
-    """Facet count of a clean render; 0 means OpenSCAD reported an empty result."""
+def render_stl(path, **defines):
+    """(facet count, STL bytes, log) of a clean render; 0 facets means an empty result."""
     rc, log, stl = openscad(path, defines)
     bad = diagnostics(log)
     if bad:
@@ -75,10 +80,21 @@ def render(path, **defines):
     if rc == 0 and stl is not None:
         count = facet_count(stl)
         if count > 0:
-            return count
+            return count, stl, log
     if rc == 1 and stl is None and EMPTY in log:
-        return 0
+        return 0, None, log
     raise RenderError(f"{path.name} {defines}: exit {rc}\n{log[-2000:]}")
+
+
+def render(path, **defines):
+    return render_stl(path, **defines)[0]
+
+
+def stl_bounds(stl):
+    """([min x, y, z], [max x, y, z]) of a binary STL."""
+    count = facet_count(stl)
+    pts = [struct.unpack_from("<3f", stl, 84 + 50 * i + 12 + 12 * k) for i in range(count) for k in range(3)]
+    return [min(p[a] for p in pts) for a in range(3)], [max(p[a] for p in pts) for a in range(3)]
 
 
 def workers():
@@ -259,6 +275,36 @@ class GeometryTest(unittest.TestCase):
         for name in ("bridge", "foot_yoke", "tape_foot"):
             with self.subTest(part=name):
                 self.assertGreater(render(DOCK, part=name), 0)
+
+    def printable_exports(self):
+        with ThreadPoolExecutor(max_workers=workers()) as pool:
+            return list(pool.map(lambda d: (d, render_stl(DOCK, **d)), PRINTABLE))
+
+    def test_all_printable_parts_export(self):
+        for defines, (count, stl, log) in self.printable_exports():
+            with self.subTest(**defines):
+                self.assertGreater(count, 0)
+                # CGAL reports the outer volume plus one per connected solid.
+                volumes = re.findall(r"Volumes:\s+(\d+)", log)
+                self.assertIn(volumes, ([], ["2"]), "not one connected solid")
+                lo, hi = stl_bounds(stl)
+                self.assertAlmostEqual(lo[2], 0, places=2, msg="not on the bed")
+                if defines["part"] == "surrogate":
+                    sizes = sorted(round(b - a, 2) for a, b in zip(lo, hi))
+                    self.assertEqual(sizes, [6.3, 60, 100])
+
+    def test_declared_build_volume(self):
+        text = (ROOT / "cad" / "parameters.scad").read_text()
+        volume = [float(v) for v in re.search(r"^build_volume = \[([^\]]*)\]", text, re.M).group(1).split(",")]
+        if min(volume) <= 0:
+            self.skipTest("print service build volume unknown: part fit UNVERIFIED")
+        for defines, (count, stl, log) in self.printable_exports():
+            lo, hi = stl_bounds(stl)
+            size = [b - a for a, b in zip(lo, hi)]
+            with self.subTest(**defines, size=[round(s, 1) for s in size]):
+                # The part may turn 90 degrees on the bed; its height is fixed by the orientation.
+                fits_xy = all(s <= v for s, v in zip(sorted(size[:2]), sorted(volume[:2])))
+                self.assertTrue(fits_xy and size[2] <= volume[2])
 
     def test_motion_sample_exports(self):
         for name in ("cradle", "motion_sample", "surrogate"):

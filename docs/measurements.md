@@ -115,6 +115,10 @@ Printed masses are solid ABS volumes from the exported STLs at 1.04 g/cm³, an u
 
 At height 0 and pitch 0 the combined centre of mass is about X=8.5, Y=19.5, Z=119.6 in the installed frame: 9.5 mm behind the pads' front edge and 120 mm above the tape faces. Each 1 g of fore/aft acceleration gives about 1.3 N·m about the tape plane. Height and pitch move this point; the load test must use the measured masses and the worst setting. These numbers are planning inputs, not a load rating.
 
+### Print service
+
+`build_volume` is `[0, 0, 0]`: the service has not supplied its usable ABS volume, so `test_declared_build_volume` is skipped and part fit is unverified. The cradle needs about 290 × 176 mm of bed and 92 mm of height in its candidate orientation; every other part fits a 160 × 75 mm footprint. Enter the volume once known and rerun the suite; split the cradle only if it then fails.
+
 ### Cable allowance
 
 The keep-outs assume one 5 mm cable (`cable_d`): behind the bay, along the bottom behind the floor, up behind the spine through the clip, a loop beside the pitch joint, and a corridor beside the mast (X=24–46, Y=40–75 in the installed frame) down to the flange. Bend radius, plug-to-cable strain reliefs, loop length and the CD0700's second cable are unmeasured.

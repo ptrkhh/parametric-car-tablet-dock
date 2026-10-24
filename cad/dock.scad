@@ -470,20 +470,29 @@ module assembly() {
     color("darkslategray") base();
 }
 
+// Candidate bed orientation: turn, then lift the lowest face to Z=0. Agree with the print service.
+module on_bed(rot, lift) translate([0, 0, lift]) rotate(rot) children();
+front_down = [90, 0, 0];      // cradle family and yoke: their -Y face on the bed
+right_down = [0, 90, 0];      // +X face on the bed
+left_down = [0, -90, 0];      // -X face on the bed
+
 validate();
 if (part == "reference") tablet_reference();
 else if (part == "assembly") assembly();
-else if (part == "cradle") cradle();
-else if (part == "motion_sample") cradle(sample_w, sample_h, false);
-else if (part == "surrogate") tablet_envelope(sample_w, tablet_t, sample_h);
-else if (part == "insert") connector_insert(connector);
-else if (part == "cover") connector_cover();
-else if (part == "fit_sample") fit_sample();
-else if (part == "mast_outer") mast_outer();
-else if (part == "mast_inner") mast_inner(0);
-else if (part == "pitch_joint") pitch_joint();
-else if (part == "slide_sample")
+// Lip, hook and floor fronts on the bed; roofs and lug teeth print as walls.
+else if (part == "cradle") on_bed(front_down, wall - front_y()) cradle();
+else if (part == "motion_sample") on_bed(front_down, wall - front_y()) cradle(sample_w, sample_h, false);
+else if (part == "fit_sample") on_bed(front_down, wall - front_y()) fit_sample();
+else if (part == "surrogate") on_bed(front_down, tablet_t / 2) tablet_envelope(sample_w, tablet_t, sample_h);
+// Entry side down: pocket, plug hole and outlets print as vertical shafts and slots.
+else if (part == "insert") on_bed(right_down, bay_x()[1]) connector_insert(connector);
+else if (part == "cover") on_bed(right_down, bay_x()[1] + wall) connector_cover();
+else if (part == "mast_outer") on_bed([0, 0, 0], -bridge_top) mast_outer();
+// Toothed faces up: the +X cheek of the inner mast, the +X face of the lug coupon.
+else if (part == "mast_inner") on_bed(right_down, fork_x()[1]) mast_inner(0);
+else if (part == "pitch_joint") on_bed(left_down, lug_t / 2) pitch_joint();
+else if (part == "slide_sample") on_bed([0, 0, 0], 30 - clamp_z())
     intersection() { mast_outer(); box([-50, 50], [0, 100], [clamp_z() - 30, sleeve_top() + 1]); }
-else if (part == "bridge") bridge();
-else if (part == "foot_yoke") foot_yoke();
+else if (part == "bridge") on_bed([0, 0, 0], bridge[2] - bridge_top) bridge();
+else if (part == "foot_yoke") on_bed(front_down, boss_r()) foot_yoke();
 else if (part == "tape_foot") tape_foot();

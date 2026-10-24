@@ -143,8 +143,45 @@ openscad --hardwarnings --export-format binstl -D 'part="motion_sample"' -o buil
 openscad --hardwarnings --export-format binstl -D 'part="surrogate"' -o build/prototype/surrogate.stl cad/dock.scad
 ```
 
-Add `-D clearance=0.3` (or 0.7) to both commands for clearance variants, and mark each printed piece with its value.
+Add `-D clearance=0.3` (or 0.7) to the `motion_sample` command for clearance variants (the surrogate does not change), and mark each printed piece with its value.
 
 Test procedure: deburr both pieces. Seat the surrogate (installation: place it tilted, press the right edge inward until flat, slide right over the detent). Then remove it: slide left against the detent to the wall, press the left edge inward, lift. Record any interference before changing a clearance, and recheck full-size geometry after any change.
 
 Physical checks, all UNRUN: slide force, tongue deflection and recovery, bump wear, automatic reseating, retention under upward and outward load, repeated cycles, actual USB disengagement margin, screen/bezel coverage of the 7.5 mm hooks and 5 mm lip, and hot ABS creep.
+
+## Printable exports
+
+`test_all_printable_parts_export` renders all 14 printed pieces (the eight dock parts, with both inserts, and the five samples) in their candidate bed orientations. Each must render without diagnostics, form one connected solid in CGAL's report, and rest on Z=0; the surrogate must measure 100 × 60 × 6.3 mm. `test_declared_build_volume` is **skipped** because the service has not supplied its usable volume; part fit is UNVERIFIED. With a 256 mm cube entered as a trial, only the cradle (288.3 × 174.8 × 91.7 mm) failed. Bed sizes for every part are in the README.
+
+A candidate orientation, a connected CGAL volume and a clean export are not slicer approval, mesh qualification or a print-quality result.
+
+## Physical protocols (all UNRUN)
+
+These are proposed development checks, to be run in order, before any installed or road-use decision. They are not safety ratings and do not replace engineering qualification. Record every result as pass, fail or UNRUN, with the inputs used.
+
+1. **Inputs and print inspection.** Record source revision, overrides, filament grade and batch, printer, nozzle, layer height, walls, infill, orientation, supports and post-processing. Have the service inspect every STL in its slicer for defects, unsupported surfaces and build-volume fit. Measure coupons, bores, nut pockets, tooth form and flat tape faces. Reject cracks, warped pads, loose body capture or obstructed controls. Repeat with the final material after any PLA trial.
+2. **Fit and repeated removal.** Start with the surrogate and motion sample. Plan 100 install/remove cycles, inspecting at 0, 10, 50 and 100. Record slide force against the detent with a gauge, detent recovery, wear and permanent set. Confirm that lift and outward escape are blocked while docked and that the tilt cannot start before the real USB plug is out. Any unintended unplugging, fracture, jam or side load on the port is a failure. Only then repeat with the unpowered bare tablet, recording real seating and end-stop positions for both connectors; never force the tablet against its port.
+3. **Mass, load and locking.** Weigh every supported part and replace the 1,106 g planning figure in docs/measurements.md. Measure each centre of mass and lever arm from the tape footprint and record F = Σmᵢ·a and M = Σrᵢ × Fᵢ for the chosen bench accelerations; do not invent a universal road acceleration. Fix the base to a sacrificial plate, load a surrogate mass, and test full height at both pitch extremes. Record force, direction, dwell, clamp torque and movement. Any clamp slip, tooth skip, cracked layer or permanent deformation is a failure. Set loads and pass thresholds before increasing them.
+4. **Heat and creep.** First measure cabin and mount temperatures in the intended parked conditions. Choose a test temperature within the filament, tape and connector specifications; no generic ABS temperature rating is assumed. Proposed development soak: 8 hours under measured surrogate load, three hot/cool cycles, deflection read hourly and after cooling, on a fixture without the tablet. Progressive creep, a released detent, a loose clamp, bond lift or permanent set is a failure. A short soak does not establish long-term life.
+5. **Adhesive contact and removal.** Select the tape grade with its supplier for the printed surface and the dashboard material. Test first on expendable representative surfaces, including texture and soft skin. Follow the tape's cleaning, pressure, dwell and removal instructions; no primer or solvent is assumed safe for the vehicle. Record bonded area, temperature, dwell, load and removal method. Reject rocking, unbonded regions, edge lift, finish marks, delamination or residue that an approved method cannot remove. Damage-free removal from the actual aged dashboard stays unproven until tested.
+6. **Electrical and cables.** After mechanical fit passes, verify charging during use with each connector, then CD0700 audio. Move through the full height and pitch range and the removal sequence with cables connected. Record charging status, connector temperature, dropouts and cable tension. Reject intermittent charging or audio, crushed cables, strain-relief contact or port loading. Confirm the cover fits with the downstream cables plugged in.
+7. **Vehicle placement and vibration.** Before bonding, check driver sightline, vents, controls, airbag covers and deployment paths (vehicle documentation), camera view and removal hand clearance in the W124; repeat for every other vehicle. After the bench, heat and bond checks, observe stationary with the engine running and surrogate mass, with witness marks filmed at each joint. Then a controlled low-speed run before representative rough surfaces; record speed, surface and duration. Reject any loosening, unintended release or unplugging, persistent wobble or unusable camera footage. If the central mast fails, identify whether the mast, cradle, foot joint, adhesive or dashboard moves before considering twin supports.
+8. **Camera footage.** Record road footage at both height limits and every pitch index intended for use. Check that the lens's full field of view clears the cradle, mast, cables, dashboard and reflections. The CAD camera placeholders are not evidence.
+
+## Qualification status
+
+| Gate | Digital evidence | Physical status |
+|---|---|---|
+| Removal path and retention | Sampled sweeps and forbidden-motion probes pass for the nominal envelope, full size and sample | UNRUN; real protrusions, clearances and detent force unmeasured |
+| Connector fit and cable outlets | Both inserts, cover, keep-outs and removal path checked with guessed seated transforms | UNRUN; bodies, seating, retention and electrical function unmeasured |
+| Height slide and pitch joint | Overlap, tooth indexing, fastener fit and clearances at nine poses checked | UNRUN; clamp force, tooth strength, stiffness and fatigue |
+| Feet and base | Flat contact on tilted planar fixtures; curved fixture shows a gap; joints, tool access and removal clearances checked | UNRUN; real dashboard contact, rocking and clamp friction |
+| Printable parts | Clean exports, connected solids, candidate bed orientation | UNRUN; service slicer review, build volume UNVERIFIED, print inspection |
+| Cabin heat and creep | No thermal analysis | UNRUN |
+| Adhesive contact and removal damage | Planar fixtures only | UNRUN |
+| Load, vibration and road stability | Planning mass and lever arms only | UNRUN |
+| Camera footage | Placeholder view cone only | UNRUN |
+| Sightline, airbag, vehicle functions | No vehicle model | UNRUN |
+| Crash retention | Not assessed | UNQUALIFIED |
+
+The source and samples support the next measurement and fit iteration. They are not fitted manufacturing exports or an approval to install.
