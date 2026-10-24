@@ -24,4 +24,29 @@ usb_marker = [9, 3.5];  // visual port marker (Z, Y), not a fit dimension
 // Removal yaw turns about the rear contact line behind the tablet centre.
 yaw_pivot = [0, tablet_t / 2, 0];
 
+// ---- Cradle retention (PROVISIONAL until the motion sample is tested) ----
+clearance = 0.5;        // running clearance at lips, roofs and hooks
+plug_engagement = 6;    // USB-C insertion depth; unmeasured
+release_travel = 8;     // leftward slide before yaw; must exceed plug_engagement + clearance
+release_yaw = 12;       // yaw that moves the left end behind the left roof
+yaw_relief = 15;        // wedge angle of the left pocket behind the tablet; > release_yaw
+wall = 3;               // cradle wall thickness
+floor_t = 6;            // bottom rail thickness under the tablet
+back_t = 4;             // top-right rear rail depth
+spine = [20, 12];       // central rear contact width (X) and depth (Y)
+lip_overlap = 5;        // left lip over the front bezel
+roof_len = 14;          // left roof along the top edge, from the docked left edge
+hook_h = 22;            // right corner hook length along the edge
+rail_h = 12;            // top-right rear rail height
+end_depth = 30;         // left end wall depth behind the tablet back
+detent_preload = 1;     // bump apex interference with the docked lower-left corner
+detent_rise = 1.5;      // bump apex height above the floor
+detent_tongue = [30, 6, 2]; // compliant floor tongue length (X), width (Y), thickness (Z)
+detent_gap = 0.6;       // slot around the tongue
+collision_eps = 0.01;   // test-only face inset; not a print clearance
+
+// ---- Motion sample: reduced cradle and surrogate with the same retention geometry ----
+sample_w = 100;
+sample_h = 60;
+
 $fn = 32;
