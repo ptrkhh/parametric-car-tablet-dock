@@ -4,7 +4,8 @@
 // The tablet origin is its centre when docked.
 include <parameters.scad>
 
-parts = ["reference", "assembly", "cradle", "motion_sample", "surrogate", "insert", "cover", "fit_sample"];
+parts = ["reference", "assembly", "cradle", "motion_sample", "surrogate", "insert", "cover", "fit_sample",
+         "mast_outer", "mast_inner", "pitch_joint", "slide_sample"];
 connectors = ["essager", "cd0700"];
 
 function member(x, list) = len([for (v = list) if (v == x) v]) > 0;
@@ -23,6 +24,11 @@ module validate() {
     assert(insert_clearance > 0 && insert_clearance <= 1, "insert_clearance must be in (0, 1]");
     assert(connector_gap - clearance - insert_clearance >= 0.4,
            "insert wall between tablet and connector body too thin");
+    assert(height_mm >= 0 && height_mm <= height_travel, "height_mm out of range");
+    assert(abs(pitch_deg) <= pitch_range, "pitch_deg out of range");
+    assert(pitch_deg % pitch_step == 0 && nominal_pitch % pitch_step == 0,
+           "pitch_deg must be a multiple of pitch_step");
+    assert(slide_overlap() >= min_overlap, "mast slide overlap below min_overlap at full height");
 }
 
 // Bare-tablet collision solid: nominal box with rounded outline corners.
@@ -230,16 +236,131 @@ module connector_mount(h) {
     }
 }
 
-module cradle_rigid(w = tablet_w, h = tablet_h, bay = true) {
-    left_end(w, h);
-    right_hooks(w, h, bay);
-    back_frame(w, h);
-    bottom_rail(w, h);
-    if (bay) connector_mount(h);
+// ---- Central support ----
+// Installed frame: pad plane at Z=0. The cradle turns about the pivot line (X axis through
+// [0, pivot[0], pivot[1]] in the cradle frame), then rises with the height setting.
+function lift0() = tablet_bottom_z + tablet_h / 2;              // cradle origin Z at zero height
+function pivot_z(hh) = lift0() + pivot[1] + hh;                 // installed pivot Z
+function teeth_k() = sin(pitch_step / 4);                       // 45-degree flanks
+function lug_mid() = lug_t / 2 + teeth_k() * teeth_r[1] + 0.4;  // lug tooth mid-plane
+function cheek_in() = lug_mid() + teeth_play + teeth_k() * teeth_r[1] + 0.4; // +X cheek inner plane
+function fork_x() = [-(lug_t / 2 + teeth_play + cheek_t), cheek_in() + cheek_t];
+function fork_drop() = cheek_r + 6;                             // fork bottom below the pivot
+function sleeve_top() = pivot_z(0) - fork_drop() - 2;
+function tongue_len() = pivot_z(0) - (bridge_top + flange[2] + 1);  // 1 mm above the sleeve floor at zero height
+function slide_overlap() = sleeve_top() - (pivot_z(height_travel) - tongue_len());
+function clamp_z() = sleeve_top() - 10;
+function sleeve_xy() = [tongue[0] / 2 + slide_gap + sleeve_wall[0], tongue[1] / 2 + slide_gap + sleeve_wall[1]];
+
+module installed(hh, pp) {
+    translate([0, 0, lift0() + hh]) translate([0, pivot[0], pivot[1]]) rotate([-(nominal_pitch + pp), 0, 0])
+        translate([0, -pivot[0], -pivot[1]]) children();
 }
 
-module cradle(w = tablet_w, h = tablet_h, bay = true) {
-    cradle_rigid(w, h, bay);
+module along_x(x0, x1, r) translate([x0, 0, 0]) rotate([0, 90, 0]) cylinder(r = r, h = x1 - x0);
+module nut_pocket(x_out, af, depth) // hex pocket entering from the +X face at x_out
+    translate([x_out - depth, 0, 0]) rotate([0, 90, 0]) cylinder(d = af / cos(30), h = depth + 1, $fn = 6);
+
+// Ring of 45-degree face teeth about the X axis, every flank through [mid, 0, 0] (Hirth form).
+// Material lies on the -X side of the toothed surface, down to x = base; `odd` selects tips.
+module face_teeth(mid, base, odd) {
+    n = 2 * round(360 / pitch_step);
+    k = teeth_k();
+    pts = [for (j = [0 : n - 1], p = [0 : 3]) let(
+        a = j * 360 / n, r = teeth_r[p % 2],
+        x = p < 2 ? mid + ((j % 2 == 1) == odd ? k : -k) * r : base)
+        [x, r * cos(a), r * sin(a)]];
+    faces = [for (j = [0 : n - 1], f = [0 : 3]) let(i = 4 * j, m = 4 * ((j + 1) % n))
+        f == 0 ? [i, m, m + 1, i + 1] : f == 1 ? [i, i + 2, m + 2, m] :
+        f == 2 ? [i + 1, m + 1, m + 3, i + 3] : [i + 2, i + 3, m + 3, m + 2]];
+    polyhedron(pts, faces);
+}
+
+// Cradle-side lug on a web from the spine: plain -X face, face teeth on +X (cradle frame).
+module pitch_joint() {
+    translate([0, pivot[0], pivot[1]]) difference() {
+        union() {
+            along_x(-lug_t / 2, lug_t / 2, lug_r);
+            face_teeth(lug_mid(), lug_t / 2 - 0.01, false);
+            box(span(0, lug_t / 2), [tablet_t / 2 + spine[1] - 1 - pivot[0], 0], [-20, 20]);
+        }
+        along_x(-lug_t, lug_t, m5[0] / 2);
+    }
+}
+
+// Open cable clip beside the fork; 1 mm lips hold a 5 mm cable laid in from +X (cradle frame).
+module cable_clip() {
+    z = [pivot[1] - 14, pivot[1] - 6];
+    y0 = tablet_t / 2 + spine[1] - 1;
+    box([9, 27], [y0, 17], z);
+    box([18, 20], [17, 23], z);
+    box([18, 27], [23, 25], z);
+    box([26, 27], [17, 18], z);
+    box([26, 27], [22, 23], z);
+}
+
+// Inner mast: fork around the lug (toothed +X cheek, plain -X cheek) on a keyed tongue. The
+// tongue slot carries the clamp bolt and stops travel at 0 and height_travel.
+module mast_inner(hh = height_mm) {
+    fx = fork_x();
+    c = clamp_z() - pivot_z(0);
+    translate([0, pivot[0], pivot_z(hh)]) difference() {
+        union() {
+            for (x = [[fx[0], fx[0] + cheek_t], [cheek_in(), fx[1]]]) hull() {
+                along_x(x[0], x[1], cheek_r);
+                box(x, span(0, tongue[1] / 2), [-fork_drop(), -fork_drop() + 1]);
+            }
+            box(fx, span(0, tongue[1] / 2), [-fork_drop(), -lug_r - 1.5]);
+            box(span(0, tongue[0] / 2), span(0, tongue[1] / 2), [-tongue_len(), -fork_drop() + 1]);
+            mirror([1, 0, 0]) face_teeth(-(lug_mid() + teeth_play), -cheek_in() - 0.01, true);
+        }
+        along_x(fx[0] - 1, fx[1] + 1, m5[0] / 2);
+        nut_pocket(fx[1], m5[1], m5[2]);
+        box(span(0, tongue[0]), span(0, m5[0] / 2), [c - height_travel - m5[0] / 2, c + m5[0] / 2]);
+    }
+}
+
+// Outer mast: ribbed sleeve on a bolted flange. The back wall is split above the cross bolt
+// so tightening it squeezes the side walls onto the tongue.
+module mast_outer() {
+    s = sleeve_xy();
+    z0 = bridge_top + flange[2];
+    difference() {
+        union() {
+            box(span(0, s[0]), span(pivot[0], s[1]), [bridge_top, sleeve_top()]);
+            box(span(0, flange[0] / 2), span(pivot[0], flange[1] / 2), [bridge_top, z0]);
+            for (x = [-10, 10], y = [pivot[0] - s[1], pivot[0] + s[1]]) {
+                y1 = y < pivot[0] ? pivot[0] - flange[1] / 2 : pivot[0] + flange[1] / 2;
+                translate([x - 2, 0, 0]) rotate([90, 0, 90]) linear_extrude(4)
+                    polygon([[y, z0 - 0.1], [y1, z0 - 0.1], [y, z0 + 15]]);
+            }
+        }
+        box(span(0, tongue[0] / 2 + slide_gap), span(pivot[0], tongue[1] / 2 + slide_gap), [z0, sleeve_top() + 1]);
+        box([-1.5, 1.5], [pivot[0], pivot[0] + s[1] + 1], [clamp_z() - 15, sleeve_top() + 1]);
+        translate([0, pivot[0], clamp_z()]) {
+            along_x(-s[0] - 1, s[0] + 1, m5[0] / 2);
+            nut_pocket(s[0], m5[1], m5[2]);
+        }
+        for (sx = [-1, 1], sy = [-1, 1])
+            translate([sx * (flange[0] / 2 - 7), pivot[0] + sy * (flange[1] / 2 - 7), bridge_top - 1])
+                cylinder(d = m5[0], h = flange[2] + 2);
+    }
+}
+
+module cradle_rigid(w = tablet_w, h = tablet_h, full = true) {
+    left_end(w, h);
+    right_hooks(w, h, full);
+    back_frame(w, h);
+    bottom_rail(w, h);
+    if (full) {
+        connector_mount(h);
+        pitch_joint();
+        cable_clip();
+    }
+}
+
+module cradle(w = tablet_w, h = tablet_h, full = true) {
+    cradle_rigid(w, h, full);
     detent_bump(w, h);
 }
 
@@ -253,11 +374,15 @@ module fit_sample() {
 }
 
 module assembly() {
-    color("orange") cradle();
-    color("peru") connector_insert(connector);
-    color("sienna") connector_cover();
-    color("red") connector_body(connector);
-    tablet_pose(slide_mm, release_yaw_deg, lift_mm) color("dimgray") tablet_reference();
+    installed(height_mm, pitch_deg) {
+        color("orange") cradle();
+        color("peru") connector_insert(connector);
+        color("sienna") connector_cover();
+        color("red") connector_body(connector);
+        tablet_pose(slide_mm, release_yaw_deg, lift_mm) color("dimgray") tablet_reference();
+    }
+    color("slategray") mast_outer();
+    color("lightslategray") mast_inner(height_mm);
 }
 
 validate();
@@ -269,3 +394,8 @@ else if (part == "surrogate") tablet_envelope(sample_w, tablet_t, sample_h);
 else if (part == "insert") connector_insert(connector);
 else if (part == "cover") connector_cover();
 else if (part == "fit_sample") fit_sample();
+else if (part == "mast_outer") mast_outer();
+else if (part == "mast_inner") mast_inner(0);
+else if (part == "pitch_joint") pitch_joint();
+else if (part == "slide_sample")
+    intersection() { mast_outer(); box([-50, 50], [0, 100], [clamp_z() - 30, sleeve_top() + 1]); }

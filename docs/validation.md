@@ -88,6 +88,35 @@ Label every printed piece with its connector and clearance. Assemble unpowered f
 
 Physical checks, all UNRUN: connector fit, alignment and seating, extraction and insertion retention, charging during use for both connectors, CD0700 audio, cover fitting with cables connected, real camera view, speaker, microphone and key clearance.
 
+## Central support candidate
+
+- **Height.** A keyed 30 × 18 mm tongue (`mast_inner`) slides in a sleeve (`mast_outer`) on a four-bolt flange with front and back gussets. One M5 cross bolt passes through both side walls and a 50 mm slot in the tongue. Tightening it squeezes the side walls onto the tongue, because the back wall is split above the bolt. The same bolt stops travel at 0 and 50 mm, so it must stay installed while adjusting. At full height 28.65 mm of tongue remains in the sleeve.
+- **Pitch.** A lug on the cradle spine sits between two fork cheeks on the tongue, supported on both sides by one M5 bolt. The lug's +X face and the +X cheek carry matching 5-degree face teeth (Hirth form, 45-degree flanks); the -X faces are plain. Every index from -15 to +15 degrees meshes with 0.2 mm axial play. 1 degree off an index the teeth collide, so a clamped joint can only sit on an index.
+- **Adjusting pitch.** Do this unloaded. Loosen the bolt, spread the +X cheek about 1.2 mm so the teeth clear, turn to the next index, reseat and tighten. Do not force the joint across engaged teeth.
+- **Cable.** A clip on the cradle beside the fork holds the cable near the pitch axis. From there a loop reaches a corridor beside the mast down to the flange.
+
+| Test | Check |
+|---|---|
+| `test_height_and_pitch_limits` | Height outside 0–50, pitch outside ±15 and pitch off the 5-degree index are rejected; all seven indexes mesh at heights 0 and 50; ±1 degree off -15, 0 and +15 collides |
+| `test_slide_overlap_at_max_height` | At full height the tongue reaches `min_overlap` (25 mm) below the sleeve top; `validate()` rejects a configuration with less |
+| `test_support_and_cable_clearance_at_extremes` | At heights 0/25/50 and pitch -15/0/+15: the slide and lift sweeps and 7 yaw poses clear the mast; cradle, connector hardware and mast parts do not overlap; the cable route, loop and corridor are clear; the camera, speaker and key keep-outs clear the mast |
+| `test_support_fasteners_clear` | At the same nine poses: both M5 bolts' shanks, washers, heads, a 60 mm hex-key path and seated nuts clear every part; full rings under each washer and nut lie inside material |
+| `test_fixture_does_not_shadow_cad` | No fixture name replaces a CAD module, function or variable |
+
+The last test exists because a fixture helper named `along_x` silently replaced the CAD module of the same name inside every check, halving every bolt hole and the lug radius. All support results above were produced after that fix.
+
+Limits: the cable keep-outs are free volumes, not a simulated cable. They do not prove bend radius, slack length or that a loop stays in its corridor. The teeth are rigid solids; tooth strength, cheek flex during adjustment, clamp force and slip under load are physical tests. The cradle bottom clears the sleeve by 4.8 mm at -15 degrees.
+
+### Support coupons
+
+Export `slide_sample` (top 40 mm of the sleeve with the split and clamp bolt), `mast_inner` and `pitch_joint` (the cradle lug on its web) before printing the full cradle:
+
+```
+openscad --hardwarnings --export-format binstl -D 'part="slide_sample"' -o build/prototype/slide_sample.stl cad/dock.scad
+```
+
+Check bolt insertion, hex-key access, nut seating, washer bearing, full thread engagement without bottoming, smooth sliding, positive tooth engagement at every index and no cracked layers. The joint coupon omits the full cradle's lever arm. Physical checks, all UNRUN: clamp holding force, tooth strength and wear, cheek flex, slip under the declared load, cable slack through the full height range at every pitch index with the cables connected and no load on the tablet port.
+
 ## Motion sample
 
 `part="motion_sample"` is `cradle(100, 60)`: the same clearances, hook overlap, roof, lip, pocket angle and detent around a smaller tablet. `part="surrogate"` is the matching 100 × 60 × 6.3 mm dummy with the tablet's provisional `corner_r`, so the detent contact matches the full cradle. The sample does not reproduce the full tablet's lever arm or mass. It contains no connector or device cutouts. Do not force a real tablet into it.

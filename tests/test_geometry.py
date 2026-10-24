@@ -7,6 +7,7 @@ empty-top-level diagnostic with no STL; anything else is a failure.
 
 import json
 import os
+import re
 import struct
 import subprocess
 import tempfile
@@ -23,6 +24,8 @@ SIZES = (False, True)
 # Yaw stage: 25 poses at 1/24 of release_yaw (0.5 degrees at the default 12), endpoints included.
 YAW_FRACTIONS = [i / 24 for i in range(25)]
 KINDS = ("essager", "cd0700")
+# Height and pitch extremes plus midpoints.
+POSES = [(hh, pp) for hh in (0, 25, 50) for pp in (-15, 0, 15)]
 
 
 class RenderError(AssertionError):
@@ -96,6 +99,15 @@ class GeometryTest(unittest.TestCase):
 
     def test_runner_empty_fixture(self):
         self.assertEqual(render(CHECKS, check="runner_empty"), 0)
+
+    def test_fixture_does_not_shadow_cad(self):
+        # The fixture includes dock.scad, so a same-named module, function or variable would
+        # silently replace the CAD definition inside every check. Only `part` is overridden.
+        def names(path):
+            return set(re.findall(r"^(?:module|function)\s+(\w+)|^(\w+)\s*=", path.read_text(), re.M))
+        cad = names(DOCK) | names(ROOT / "cad" / "parameters.scad")
+        clash = {n for pair in names(CHECKS) & cad for n in pair if n} - {"part"}
+        self.assertEqual(clash, set())
 
     def test_runner_broken_fixture(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -173,6 +185,38 @@ class GeometryTest(unittest.TestCase):
                         {"part": "cover"}, {"part": "fit_sample"}):
             with self.subTest(**defines):
                 self.assertGreater(render(DOCK, **defines), 0)
+
+    def test_height_and_pitch_limits(self):
+        cases = [("height_mm out of range", {"height_mm": -1}), ("height_mm out of range", {"height_mm": 51}),
+                 ("pitch_deg out of range", {"pitch_deg": -20}), ("pitch_deg out of range", {"pitch_deg": 20}),
+                 ("pitch_deg must be a multiple of pitch_step", {"pitch_deg": 7})]
+        for message, defines in cases:
+            with self.subTest(**defines):
+                self.assert_rejected(message, **defines)
+        # Every index from -15 to +15 meshes with axial play; 1 degree off an index locks.
+        self.assert_all_empty("pitch_teeth_lock", [{"height": hh, "pitch": pp} for hh in (0, 50)
+                                                   for pp in range(-15, 16, 5)])
+        self.assert_all_blocked("pitch_teeth_lock", [{"pitch": pp + d} for pp in (-15, 0, 15) for d in (-1, 1)])
+
+    def test_slide_overlap_at_max_height(self):
+        self.assertGreater(render(CHECKS, check="slide_overlap_at_max_height"), 0)
+        self.assert_rejected("mast slide overlap below min_overlap at full height", tablet_bottom_z=55)
+
+    def test_support_and_cable_clearance_at_extremes(self):
+        base = [{"height": hh, "pitch": pp, "kind": "cd0700"} for hh, pp in POSES]
+        variants = [dict(v, stage=s) for v in base for s in ("slide", "lift", "parts", "cables", "camera")]
+        variants += [dict(v, stage="yaw", fraction=i / 6) for v in base for i in range(7)]
+        self.assert_all_empty("support_and_cable_clearance_at_extremes", variants)
+
+    def test_support_fasteners_clear(self):
+        variants = [{"height": hh, "pitch": pp, "kind": "cd0700"} for hh, pp in POSES]
+        self.assert_all_empty("support_fasteners_clear", variants)
+        self.assert_all_empty("support_fasteners_bearing", [{"height": hh} for hh in (0, 50)])
+
+    def test_support_parts_export(self):
+        for name in ("mast_outer", "mast_inner", "pitch_joint", "slide_sample"):
+            with self.subTest(part=name):
+                self.assertGreater(render(DOCK, part=name), 0)
 
     def test_motion_sample_exports(self):
         for name in ("cradle", "motion_sample", "surrogate"):

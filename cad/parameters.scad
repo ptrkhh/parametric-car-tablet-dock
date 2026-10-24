@@ -69,6 +69,28 @@ speaker_z = [-50, 50];           // speaker openings on both side edges
 speaker_h = 16;                  // speaker opening height
 control_x = [-95, -45];          // power and volume keys on the top edge
 
+// ---- Central support (PROVISIONAL; installation height and viewing angle unmeasured) ----
+height_travel = 50;        // locked height range
+pitch_range = 15;          // ± locked pitch about the nominal angle
+pitch_step = 5;            // face-tooth index
+nominal_pitch = 0;         // installed screen pitch at pitch_deg = 0; vertical until measured
+tablet_bottom_z = 70;      // tablet bottom above the pad plane at zero height and pitch
+pivot = [55, -10];         // pitch axis: Y behind the tablet, Z from the tablet centre (cradle frame)
+lug_t = 12;                // cradle lug thickness (X)
+lug_r = 30;                // cradle lug radius
+cheek_t = 8;               // mast fork cheek thickness
+cheek_r = 32;              // fork cheek radius
+teeth_r = [18, 28];        // face-tooth annulus on the lug and the +X cheek
+teeth_play = 0.2;          // axial play at an index; about 0.4 to 0.6 degrees of rotational play
+tongue = [30, 18];         // inner mast section X, Y
+slide_gap = 0.3;           // per side between tongue and sleeve
+sleeve_wall = [6, 4];       // side walls (X; carry the clamp nut), front and back walls (Y)
+bridge_top = 18;           // mast flange seat above the pad plane
+flange = [70, 50, 5];      // mast flange X, Y, Z
+min_overlap = 25;          // retained slide overlap at full height
+m5 = [5.6, 8.4, 4.4, 8.5, 5]; // clearance hole, nut pocket across flats, pocket depth, head diameter, head height
+washer5 = [10, 1];         // M5 washer OD, thickness
+
 // ---- Motion sample: reduced cradle and surrogate with the same retention geometry ----
 sample_w = 100;
 sample_h = 60;

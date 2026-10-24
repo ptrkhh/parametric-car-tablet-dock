@@ -48,13 +48,13 @@ kind = "essager";
 // Bolts sit beyond the CD0700 body ends; the bay ends beyond the nut pockets.
 bolt_z = cd0700_body[2] / 2 + 1 + m3[0] / 2 + 1.5;
 bay_half = bolt_z + m3[1] / 2 + 1.5;
-function body_size(k) = k == "cd0700" ? cd0700_body : essager_body;
-function body_top(k) = k == "cd0700" ? usb_z + cd0700_body[2] / 2 : usb_z + essager_plug_drop;
-body_xc = w / 2 + connector_gap + body_size(kind)[0] / 2;
+function witness_size(k) = k == "cd0700" ? cd0700_body : essager_body;
+function witness_top(k) = k == "cd0700" ? usb_z + cd0700_body[2] / 2 : usb_z + essager_plug_drop;
+body_xc = w / 2 + connector_gap + witness_size(kind)[0] / 2;
 
 module body_witness(k) {
-    b = body_size(k);
-    translate([w / 2 + connector_gap, -b[1] / 2, body_top(k) - b[2]]) cube(b);
+    b = witness_size(k);
+    translate([w / 2 + connector_gap, -b[1] / 2, witness_top(k) - b[2]]) cube(b);
 }
 // Plug shell from the body face into the docked port.
 module plug_witness()
@@ -68,7 +68,7 @@ module downstream_witness(k) {
         along_z(z0, downstream_plug, up);
         along_z(z0 + (up ? 1 : -1) * downstream_plug[2], [cable_d, cable_d, 10], up);
     } else {
-        z0 = body_top(k) - essager_body[2];
+        z0 = witness_top(k) - essager_body[2];
         along_z(z0, essager_relief, false);
         along_z(z0 - essager_relief[2], [cable_d, cable_d, 10], false);
     }
@@ -92,17 +92,64 @@ module feature_witnesses() {
     translate([control_x[0], -tablet_t / 2, h / 2]) cube([control_x[1] - control_x[0], tablet_t, 10]);
 }
 
+// Tablet swept through one removal stage: slide and lift are exact sweeps, yaw is one pose.
+module removal(st) {
+    assert(member(st, ["slide", "yaw", "lift"]), str("unknown stage: ", st));
+    if (st == "slide") hull() { body(); slid(release_travel) body(); }
+    else if (st == "yaw") yawed(fraction * release_yaw) slid(release_travel) body();
+    else hull() { released(); lifted(lift_clear) released(); }
+}
+
+// ---- Installed frame: pad plane at Z=0; the cradle turns about the pivot line, then lifts ----
+height = 0;       // mm of height travel
+pitch = 0;        // degrees from the nominal pitch
+function rot_x(a) = [[1, 0, 0, 0], [0, cos(a), -sin(a), 0], [0, sin(a), cos(a), 0], [0, 0, 0, 1]];
+function placement(hh, pp) = translation([0, 0, tablet_bottom_z + h / 2 + hh])
+    * translation([0, pivot[0], pivot[1]]) * rot_x(-(nominal_pitch + pp)) * translation([0, -pivot[0], -pivot[1]]);
+module placed() multmatrix(placement(height, pitch)) children();
+pivot_installed = tablet_bottom_z + h / 2 + pivot[1] + height;
+module support() { mast_outer(); mast_inner(height); }
+
+// Cable keep-outs (assumed 5 mm cable): route in the cradle frame from the bay to the clip,
+// loop from the clip to the mast, corridor beside the mast down to the bridge.
+module cable_route() {
+    c = cable_d;
+    x0 = w / 2 + 5;
+    translate([x0, 13, -h / 2 + 8]) cube([c, c, h / 2 - 8 + 55]);         // behind the bay, both outlets
+    translate([22, 13, -h / 2 + 8]) cube([x0 - 22 + c, c, c]);            // along the bottom, behind the floor
+    translate([20.5, 17.5, -h / 2 + 8]) cube([c, c, h / 2 - 8 + pivot[1] + 2]); // up behind the spine through the clip
+}
+// M5 witnesses along a bolt axis (X), head on the -X side. b = [head face, nut face, length].
+k_teeth = sin(pitch_step / 4);
+cheek_in = lug_t / 2 + 2 * (k_teeth * teeth_r[1] + 0.4) + teeth_play;   // +X cheek inner plane
+pitch_bolt = [-(lug_t / 2 + teeth_play + cheek_t), cheek_in + cheek_t, 35];
+sleeve_out = tongue[0] / 2 + slide_gap + sleeve_wall[0];
+clamp_bolt = [-sleeve_out, sleeve_out, 45];
+module rod_x(x0, x1, d, fn = 32) translate([x0, 0, 0]) rotate([0, 90, 0]) cylinder(d = d, h = x1 - x0, $fn = fn);
+module bolt_clear(b) {
+    wt = washer5[1];
+    rod_x(b[0] - wt, b[0] - wt + b[2], 5);                                  // shank
+    rod_x(b[0] - wt - collision_eps, b[0] - collision_eps, washer5[0]);         // washer
+    rod_x(b[0] - wt - m5[4], b[0] - wt - collision_eps, m5[3]);             // head
+    rod_x(b[0] - wt - m5[4] - 60, b[0] - wt - m5[4], m5[3]);                // hex key and hand
+    rod_x(b[1] - m5[2] + collision_eps, b[1] - m5[2] + 4, 8 / cos(30), 6);  // 8 AF × 4 nut on the pocket floor
+}
+// Rings that must lie wholly inside material: under the washer and under the nut.
+// Inset by collision_eps from the faces and the bore so no face coincides with the part.
+module bolt_bearing(b) {
+    e = collision_eps;
+    difference() { rod_x(b[0] + e, b[0] + 0.5, washer5[0]); rod_x(b[0] - 1, b[0] + 1, m5[0] + 0.2); }
+    difference() { rod_x(b[1] - m5[2] - 0.5, b[1] - m5[2] - e, 8); rod_x(b[1] - m5[2] - 1, b[1], m5[0] + 0.2); }
+}
+module at_pitch_bolt() translate([0, pivot[0], pivot_installed]) children();
+module at_clamp_bolt() translate([0, pivot[0], clamp_z()]) children();
+
+module cable_loop() translate([20, 31, pivot_installed - 25]) cube([8, 10, 30]);
+module cable_corridor() translate([24, 40, bridge_top + flange[2] + 7]) cube([22, 35, pivot_installed - bridge_top - flange[2] - 5]);
+
 if (check == "runner_solid") cube(1);
 else if (check == "runner_empty") intersection() { cube(1); translate([2, 0, 0]) cube(1); }
-else if (check == "slide_then_yaw_then_lift_clearance") {
-    assert(member(stage, ["slide", "yaw", "lift"]), str("unknown stage: ", stage));
-    intersection() {
-        rigid();
-        if (stage == "slide") hull() { body(); slid(release_travel) body(); }
-        else if (stage == "yaw") yawed(fraction * release_yaw) slid(release_travel) body();
-        else hull() { released(); lifted(lift_clear) released(); }
-    }
-}
+else if (check == "slide_then_yaw_then_lift_clearance") intersection() { rigid(); removal(stage); }
 else if (check == "connected_yaw_is_blocked")
     intersection() { rigid(); yawed(probe_yaw) slid(fraction * plug_engagement) body(); }
 else if (check == "docked_lift_is_blocked")
@@ -136,17 +183,42 @@ else if (check == "connector_body_captured") {
 }
 else if (check == "connector_clear_before_yaw") {
     // The plug is out before the yaw starts; the posed tablet never meets connector hardware.
-    assert(member(stage, ["slide", "yaw", "lift"]), str("unknown stage: ", stage));
-    intersection() {
-        union() { hardware(kind); if (stage != "slide") plug_witness(); }
-        if (stage == "slide") hull() { body(); slid(release_travel) body(); }
-        else if (stage == "yaw") yawed(fraction * release_yaw) slid(release_travel) body();
-        else hull() { released(); lifted(lift_clear) released(); }
-    }
+    intersection() { union() { hardware(kind); if (stage != "slide") plug_witness(); } removal(stage); }
 }
 else if (check == "cable_outlets_open")
     intersection() { downstream_witness(kind); union() { connector_insert(kind); lid(); mount(); } }
 else if (check == "device_feature_clearances")
     intersection() { feature_witnesses(); union() { rigid(); connector_insert(kind); connector_cover(); } }
 else if (check == "feature_witnesses_present") feature_witnesses();
+else if (check == "pitch_teeth_lock")
+    // Empty at a tooth index; any turn beyond the axial play off an index meets the mating teeth.
+    intersection() { placed() pitch_joint(); mast_inner(height); }
+else if (check == "slide_overlap_at_max_height") {
+    // At full height the tongue still reaches min_overlap below the sleeve top.
+    top = sleeve_top();
+    intersection() { mast_inner(height_travel); translate([-50, 0, top - min_overlap - 0.5]) cube([100, 100, 0.5]); }
+}
+else if (check == "support_and_cable_clearance_at_extremes") {
+    assert(member(stage, ["slide", "yaw", "lift", "parts", "cables", "camera"]), str("unknown stage: ", stage));
+    if (member(stage, ["slide", "yaw", "lift"])) intersection() { support(); placed() removal(stage); }
+    else if (stage == "parts") {
+        intersection() { support(); placed() { rigid(); connector_insert(kind); connector_cover(); } }
+        intersection() { mast_outer(); mast_inner(height); }
+    }
+    else if (stage == "cables") intersection() {
+        union() { cable_corridor(); cable_loop(); placed() cable_route(); }
+        union() { support(); placed() { rigid(); hardware(kind); } }
+    }
+    else intersection() { support(); placed() feature_witnesses(); }
+}
+else if (check == "support_fasteners_clear")
+    intersection() {
+        union() { at_pitch_bolt() bolt_clear(pitch_bolt); at_clamp_bolt() bolt_clear(clamp_bolt); }
+        union() { support(); placed() { rigid(); hardware(kind); } }
+    }
+else if (check == "support_fasteners_bearing")
+    difference() {
+        union() { at_pitch_bolt() bolt_bearing(pitch_bolt); at_clamp_bolt() bolt_bearing(clamp_bolt); }
+        support();
+    }
 else assert(false, str("unknown check: ", check));
