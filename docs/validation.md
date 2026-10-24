@@ -46,6 +46,48 @@ A rotation probe about the right hook line was rejected: with a zero-overlap lip
 
 Limits: these checks do not prove poses between yaw samples, combined escape paths (for example lift during a partial slide), forces, tolerance stacks or deformation. The envelope has no edge profile or camera island.
 
+## Connector candidate
+
+The cradle carries a rear mount behind a right-side bay, tied to both corner hooks by side rails at its outer edge. Each connector has its own insert with the same outer envelope and the same two M3 bolt positions. One cover fits both inserts.
+
+- **Insert.** The body slides in from the right into a pocket that fits it with `insert_clearance` on every side; its plug shell passes through a hole in the wall facing the tablet. The insert's front wall conceals the body from the occupant view. The CD0700's two outlets and the Essager's downward cable channel open to the front, so cables lay in from the front.
+- **Cover.** A right side plate closes the entry, and a boss stops the body against plug insertion. A front flange carries the two bolts, which clamp cover, insert and rear mount to captive nuts. The cover clears the outlets and installs with the downstream cables already plugged in.
+- **Retention.** Extraction load (tablet sliding left) goes through the insert's tablet-side wall. Insertion load goes into the cover boss. The pocket holds the body in Y; the plug hole also limits Z movement because the CD0700 outlets are as large as its end faces.
+- **Stops.** The tablet's right stop is in the corner hooks. The insert face stays 0.5 mm from the tablet edge, so the plug is never the end stop.
+
+Assembly order:
+
+1. Slide the unpowered body into its insert from the right.
+2. Place the insert against the rear mount.
+3. Plug the downstream cables in through the front-open outlets and press the cables into their channels.
+4. Fit the cover and tighten the two M3 × 25 bolts.
+
+| Test | Check |
+|---|---|
+| `test_both_insert_interfaces_match` | Each insert stays inside the common envelope; insert, cover and cradle do not overlap; bolt shanks pass through all three; body and plug clear every part |
+| `test_connector_body_captured` | 1 mm shifts of body plus plug in ±X, ±Y and ±Z meet the insert or cover |
+| `test_connector_clear_before_yaw` | Both configurations: insert, cover, body and downstream witnesses clear the slide sweep; with the plug added they clear 13 yaw poses (1-degree steps) and the lift sweep. The plug is out of the tablet before the yaw starts |
+| `test_cable_outlets_open` | Downstream plug or strain-relief witnesses plus 10 mm of cable clear insert, cover and cradle |
+| `test_device_feature_clearances` | Camera cones, speaker and key keep-outs clear cradle, insert and cover; the witnesses render nonempty |
+
+Intended contacts (insert against the rear mount and against the cover) are separated by 0.01 mm in the fixtures so face contact does not count as overlap. Witnesses are placed from the documented rules in the fixture file, not from the CAD modules.
+
+Limits: these checks use guessed seated transforms. They do not establish electrical seating, zero port stress, plug alignment tolerance, cable bend radius or the downstream route behind the tablet. The top CD0700 plug sits next to the assumed right speaker opening.
+
+### Fit samples
+
+Export `part="fit_sample"` (the cradle's right side from the top hook down past the bay), plus `part="insert"` for each connector and `part="cover"`, at `insert_clearance` 0.3, 0.5 and 0.7:
+
+```
+openscad --hardwarnings --export-format binstl -D 'part="fit_sample"' -o build/prototype/fit_sample.stl cad/dock.scad
+openscad --hardwarnings --export-format binstl -D 'part="insert"' -D 'connector="cd0700"' -D insert_clearance=0.5 -o build/prototype/insert_cd0700_0.5.stl cad/dock.scad
+openscad --hardwarnings --export-format binstl -D 'part="cover"' -D insert_clearance=0.5 -o build/prototype/cover_0.5.stl cad/dock.scad
+```
+
+Label every printed piece with its connector and clearance. Assemble unpowered first. Hold the bare tablet's right edge against the top hook's stop and measure plug axial alignment, seating depth, extraction distance, body restraint and cable bend. Inspect the 0.8 to 1.2 mm tablet-side wall on every sample. Any tablet load through the USB port, or a stop that lets the plug bottom before the tablet reaches the hook, is a failure.
+
+Physical checks, all UNRUN: connector fit, alignment and seating, extraction and insertion retention, charging during use for both connectors, CD0700 audio, cover fitting with cables connected, real camera view, speaker, microphone and key clearance.
+
 ## Motion sample
 
 `part="motion_sample"` is `cradle(100, 60)`: the same clearances, hook overlap, roof, lip, pocket angle and detent around a smaller tablet. `part="surrogate"` is the matching 100 × 60 × 6.3 mm dummy with the tablet's provisional `corner_r`, so the detent contact matches the full cradle. The sample does not reproduce the full tablet's lever arm or mass. It contains no connector or device cutouts. Do not force a real tablet into it.

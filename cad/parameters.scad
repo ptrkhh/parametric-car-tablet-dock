@@ -45,6 +45,30 @@ detent_tongue = [30, 6, 2]; // compliant floor tongue length (X), width (Y), thi
 detent_gap = 0.6;       // slot around the tongue
 collision_eps = 0.01;   // test-only face inset; not a print clearance
 
+// ---- Connectors and right-side bay (PROVISIONAL; seated transforms unmeasured) ----
+connector_gap = 2;               // tablet right edge to connector body face
+plug_tip = [8.4, 2.6];           // USB-C plug shell, Z × Y
+cd0700_body = [12.7, 8.9, 49.3]; // X protrusion, Y thickness, Z length; centred on the port
+essager_body = [12.7, 6.3, 16];  // 90-degree elbow, X, Y, Z; unmeasured
+essager_plug_drop = 4;           // plug centre below the elbow top; the cable exits downward
+downstream_plug = [12, 8, 24];   // CD0700 downstream plug bodies, X, Y, Z; unmeasured
+essager_relief = [6, 6, 20];     // Essager strain relief below the elbow; unmeasured
+cable_d = 5;                     // downstream cable diameter allowance
+insert_clearance = 0.5;          // body pocket, plug hole, outlets and cover boss; fit variants 0.3/0.5/0.7
+insert_wall = 1.6;               // insert front and back walls around the thickest body
+bay_w = 23;                      // bay width from the tablet edge (X)
+mount_t = 5;                     // rear mount thickness behind the insert
+m3 = [3.4, 5.8, 2.7];            // M3 clearance hole, nut pocket across flats, pocket depth
+m3_bolt_x = 19.5;                // insert/cover bolt X from the tablet edge
+
+// ---- Device feature placeholders (PROVISIONAL; measure the tablet) ----
+camera = [-110, 62];             // rear camera centre X, Z
+camera_half_angle = 35;          // view cone half-angle; recording mode unmeasured
+front_camera = [0, 77];          // front camera on the top bezel, X, Z
+speaker_z = [-50, 50];           // speaker openings on both side edges
+speaker_h = 16;                  // speaker opening height
+control_x = [-95, -45];          // power and volume keys on the top edge
+
 // ---- Motion sample: reduced cradle and surrogate with the same retention geometry ----
 sample_w = 100;
 sample_h = 60;

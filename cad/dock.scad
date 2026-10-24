@@ -4,7 +4,7 @@
 // The tablet origin is its centre when docked.
 include <parameters.scad>
 
-parts = ["reference", "assembly", "cradle", "motion_sample", "surrogate"];
+parts = ["reference", "assembly", "cradle", "motion_sample", "surrogate", "insert", "cover", "fit_sample"];
 connectors = ["essager", "cd0700"];
 
 function member(x, list) = len([for (v = list) if (v == x) v]) > 0;
@@ -20,6 +20,9 @@ module validate() {
     assert(yaw_relief > release_yaw, "yaw_relief must exceed release_yaw");
     assert(0 < detent_preload && detent_preload < detent_rise && detent_rise < corner_r,
            "detent needs 0 < preload < rise < corner_r");
+    assert(insert_clearance > 0 && insert_clearance <= 1, "insert_clearance must be in (0, 1]");
+    assert(connector_gap - clearance - insert_clearance >= 0.4,
+           "insert wall between tablet and connector body too thin");
 }
 
 // Bare-tablet collision solid: nominal box with rounded outline corners.
@@ -37,8 +40,9 @@ module tablet_pose(slide_mm, release_yaw_deg, lift_mm) {
             translate([-slide_mm, 0, 0]) children();
 }
 
+// Port recess deep enough for the plug shell.
 module usb_port() {
-    translate([tablet_w / 2, 0, usb_z]) cube([4, usb_marker[1], usb_marker[0]], center = true);
+    translate([tablet_w / 2, 0, usb_z]) cube([2 * plug_engagement + 2, usb_marker[1], usb_marker[0]], center = true);
 }
 
 module tablet_reference() {
@@ -85,12 +89,13 @@ module left_end(w, h) {
 }
 
 // Corner hooks: right stop, front overlap that blocks yaw until the slide passes hook_x,
-// and a roof following the top-right corner arc for upward capture.
-module right_hooks(w, h) {
+// and a roof following the top-right corner arc for upward capture. With the connector
+// bay they widen and deepen to carry the bay's side rails.
+module right_hooks(w, h, bay) {
     x0 = hook_x(w);
-    x1 = w / 2 + wall;
+    x1 = w / 2 + (bay ? bay_w : wall);
     y0 = front_y() - wall;
-    y1 = tablet_t / 2 + back_t;
+    y1 = bay ? bay_y()[1] + mount_t : tablet_t / 2 + back_t;
     difference() {
         for (top = [true, false]) {
             z0 = top ? h / 2 - hook_h : -h / 2 - floor_t;
@@ -137,30 +142,130 @@ module detent_bump(w, h) {
         linear_extrude(detent_tongue[1]) polygon([[xb - s, -0.2], [xb, detent_rise], [xb + s, -0.2]]);
 }
 
-module cradle_rigid(w = tablet_w, h = tablet_h) {
-    left_end(w, h);
-    right_hooks(w, h);
-    back_frame(w, h);
-    bottom_rail(w, h);
+// ---- Connector bay: tablet frame, right of the docked tablet ----
+// Both bodies are centred on the port in Y. The bay is sized for the CD0700, the longer body.
+// Inserts take the body from the right; the common cover closes that side and its boss
+// stops the body against plug insertion. Outlets open to the front so cables lay in.
+function bay_x() = [tablet_w / 2 + clearance, tablet_w / 2 + bay_w];
+function span(c, r) = [c - r, c + r];
+function bay_y() = span(0, cd0700_body[1] / 2 + 1 + insert_wall);
+function bolt_z() = cd0700_body[2] / 2 + 1 + m3[0] / 2 + 1.5;
+function bay_z() = span(usb_z, bolt_z() + m3[1] / 2 + 1.5);
+function body_size(kind) = kind == "cd0700" ? cd0700_body : essager_body;
+function body_top(kind) = kind == "cd0700" ? usb_z + cd0700_body[2] / 2 : usb_z + essager_plug_drop;
+function body_x() = tablet_w / 2 + connector_gap;
+function boss_x() = body_x() + max(cd0700_body[0], essager_body[0]) + insert_clearance;
+
+module box(x, y, z) translate([x[0], y[0], z[0]]) cube([x[1] - x[0], y[1] - y[0], z[1] - z[0]]);
+
+// Purchased connector with its plug shell, as seated with the tablet docked (reference only).
+module connector_body(kind) {
+    b = body_size(kind);
+    box([body_x(), body_x() + b[0]], span(0, b[1] / 2), [body_top(kind) - b[2], body_top(kind)]);
+    box([tablet_w / 2 - plug_engagement, body_x()], span(0, plug_tip[1] / 2),
+        span(usb_z, plug_tip[0] / 2));
 }
 
-module cradle(w = tablet_w, h = tablet_h) {
-    cradle_rigid(w, h);
+module bolt_holes() {
+    for (s = [-1, 1]) translate([tablet_w / 2 + m3_bolt_x, 0, usb_z + s * bolt_z()])
+        rotate([90, 0, 0]) cylinder(d = m3[0], h = 100, center = true);
+}
+
+module connector_insert(kind) {
+    b = body_size(kind);
+    ic = insert_clearance;
+    xc = body_x() + b[0] / 2;
+    difference() {
+        box(bay_x(), bay_y(), bay_z());
+        // Exact pocket, a prism to the right face so the body slides in from the right.
+        box([body_x() - ic, bay_x()[1] + 1], [-b[1] / 2 - ic, b[1] / 2 + ic],
+            [body_top(kind) - b[2] - ic, body_top(kind) + ic]);
+        // Common entry channel the cover boss fills.
+        box([boss_x(), bay_x()[1] + 1], span(0, cd0700_body[1] / 2 + ic),
+            span(usb_z, cd0700_body[2] / 2 + ic));
+        // Plug hole through the wall facing the tablet.
+        box([bay_x()[0] - 1, body_x()], span(0, plug_tip[1] / 2 + ic), span(usb_z, plug_tip[0] / 2 + ic));
+        if (kind == "cd0700") for (top = [true, false]) {
+            end = usb_z + (top ? 1 : -1) * cd0700_body[2] / 2;
+            box([xc - downstream_plug[0] / 2 - ic, xc + downstream_plug[0] / 2 + ic],
+                [bay_y()[0] - 1, downstream_plug[1] / 2 + ic],
+                top ? [end - 0.1, bay_z()[1] + 1] : [bay_z()[0] - 1, end + 0.1]);
+        } else
+            box([xc - essager_relief[0] / 2 - ic, xc + essager_relief[0] / 2 + ic],
+                [bay_y()[0] - 1, essager_relief[1] / 2 + ic],
+                [bay_z()[0] - 1, body_top(kind) - b[2] + 0.1]);
+        bolt_holes();
+    }
+}
+
+// Common right-side cover: side plate, front flange carrying the bolts, and a boss that
+// fills the entry channel to within insert_clearance of the body.
+module connector_cover() {
+    x1 = bay_x()[1];
+    y0 = bay_y()[0] - wall;
+    difference() {
+        union() {
+            box([x1, x1 + wall], [y0, bay_y()[1]], bay_z());
+            box([x1 - 7, x1 + wall], [y0, bay_y()[0]], bay_z());
+            box([boss_x(), x1 + 0.5], span(0, cd0700_body[1] / 2), span(usb_z, cd0700_body[2] / 2));
+        }
+        bolt_holes();
+    }
+}
+
+// Rear mount behind the insert with captive M3 nut pockets, tied to both corner hooks by
+// side rails at the outer edge; the space beside the rails stays open for cables.
+module connector_mount(h) {
+    y = [bay_y()[1], bay_y()[1] + mount_t];
+    x1 = bay_x()[1];
+    difference() {
+        union() {
+            box(bay_x(), y, bay_z());
+            box([x1 - 5, x1], y, [bay_z()[1] - 1, h / 2 - hook_h + 1]);
+            box([x1 - 5, x1], y, [-h / 2 + hook_h - 1, bay_z()[0] + 1]);
+        }
+        bolt_holes();
+        for (s = [-1, 1]) translate([tablet_w / 2 + m3_bolt_x, y[1] - m3[2], usb_z + s * bolt_z()])
+            rotate([-90, 0, 0]) cylinder(d = m3[1] / cos(30), h = m3[2] + 1, $fn = 6);
+    }
+}
+
+module cradle_rigid(w = tablet_w, h = tablet_h, bay = true) {
+    left_end(w, h);
+    right_hooks(w, h, bay);
+    back_frame(w, h);
+    bottom_rail(w, h);
+    if (bay) connector_mount(h);
+}
+
+module cradle(w = tablet_w, h = tablet_h, bay = true) {
+    cradle_rigid(w, h, bay);
     detent_bump(w, h);
+}
+
+// Right side of the cradle around the bay, including the top hook as the tablet stop,
+// for fitting a real tablet edge, insert, cover and connector.
+module fit_sample() {
+    intersection() {
+        cradle();
+        box([hook_x(tablet_w) - 2, bay_x()[1] + 1], [-50, 50], [bay_z()[0] - 2, tablet_h / 2 + clearance + wall + 1]);
+    }
 }
 
 module assembly() {
     color("orange") cradle();
-    tablet_pose(slide_mm, release_yaw_deg, lift_mm) {
-        color("dimgray") tablet_reference();
-        // Plug marker shows the occupant-right port in Front view.
-        color("red") translate([tablet_w / 2 + 6, 0, usb_z]) cube([10, usb_marker[1], usb_marker[0]], center = true);
-    }
+    color("peru") connector_insert(connector);
+    color("sienna") connector_cover();
+    color("red") connector_body(connector);
+    tablet_pose(slide_mm, release_yaw_deg, lift_mm) color("dimgray") tablet_reference();
 }
 
 validate();
 if (part == "reference") tablet_reference();
 else if (part == "assembly") assembly();
 else if (part == "cradle") cradle();
-else if (part == "motion_sample") cradle(sample_w, sample_h);
+else if (part == "motion_sample") cradle(sample_w, sample_h, false);
 else if (part == "surrogate") tablet_envelope(sample_w, tablet_t, sample_h);
+else if (part == "insert") connector_insert(connector);
+else if (part == "cover") connector_cover();
+else if (part == "fit_sample") fit_sample();

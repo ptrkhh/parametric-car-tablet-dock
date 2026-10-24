@@ -22,6 +22,7 @@ EMPTY = "Current top level object is empty."
 SIZES = (False, True)
 # Yaw stage: 25 poses at 1/24 of release_yaw (0.5 degrees at the default 12), endpoints included.
 YAW_FRACTIONS = [i / 24 for i in range(25)]
+KINDS = ("essager", "cd0700")
 
 
 class RenderError(AssertionError):
@@ -140,10 +141,38 @@ class GeometryTest(unittest.TestCase):
             ("yaw_relief must exceed release_yaw", {"yaw_relief": 12}),
             ("detent needs 0 < preload < rise < corner_r", {"detent_preload": 0}),
             ("detent needs 0 < preload < rise < corner_r", {"detent_preload": 1.5}),
+            ("insert_clearance must be in (0, 1]", {"insert_clearance": 0}),
+            ("insert_clearance must be in (0, 1]", {"insert_clearance": -0.2}),
+            ("insert wall between tablet and connector body too thin", {"connector_gap": 1.2}),
         ]
         for message, defines in cases:
             with self.subTest(**defines):
                 self.assert_rejected(message, **defines)
+
+    def test_both_insert_interfaces_match(self):
+        self.assert_all_empty("both_insert_interfaces_match", [{"kind": k} for k in KINDS])
+
+    def test_connector_body_captured(self):
+        variants = [{"kind": k, "probe": p} for k in KINDS for p in range(6)]
+        self.assert_all_blocked("connector_body_captured", variants)
+
+    def test_connector_clear_before_yaw(self):
+        variants = [{"kind": k, "stage": s} for k in KINDS for s in ("slide", "lift")]
+        variants += [{"kind": k, "stage": "yaw", "fraction": i / 12} for k in KINDS for i in range(13)]
+        self.assert_all_empty("connector_clear_before_yaw", variants)
+
+    def test_cable_outlets_open(self):
+        self.assert_all_empty("cable_outlets_open", [{"kind": k} for k in KINDS])
+
+    def test_device_feature_clearances(self):
+        self.assertGreater(render(CHECKS, check="feature_witnesses_present"), 0)
+        self.assert_all_empty("device_feature_clearances", [{"kind": k} for k in KINDS])
+
+    def test_connector_parts_export(self):
+        for defines in ({"part": "insert", "connector": "essager"}, {"part": "insert", "connector": "cd0700"},
+                        {"part": "cover"}, {"part": "fit_sample"}):
+            with self.subTest(**defines):
+                self.assertGreater(render(DOCK, **defines), 0)
 
     def test_motion_sample_exports(self):
         for name in ("cradle", "motion_sample", "surrogate"):

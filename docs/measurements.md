@@ -24,6 +24,55 @@ None yet. No tablet, connector, dashboard or print-service value has been measur
 | `usb_marker` | 9 × 3.5 | Visual port marker only, not a fit dimension |
 | `yaw_pivot` | [0, 3.15, 0] | Removal yaw turns about the rear contact line behind the tablet centre |
 
+### Cradle retention
+
+| Parameter | Value | Why / what replaces it |
+|---|---|---|
+| `clearance` | 0.5 | Running clearance at lips, roofs and hooks; motion-sample variants 0.3 / 0.5 / 0.7 |
+| `plug_engagement` | 6 | USB-C insertion depth guess; measure with both connectors |
+| `release_travel` | 8 | Must exceed `plug_engagement + clearance`; set from the measured engagement, not from the 15 mm protrusion estimate |
+| `release_yaw`, `yaw_relief` | 12°, 15° | Mechanism choice; see docs/validation.md |
+| `detent_preload`, `detent_rise` | 1, 1.5 | Tune on the motion sample |
+| `lip_overlap`, hook overlap | 5, 7.5 | Cover the front bezel; check against the real screen edge |
+
+### Connectors
+
+Both bodies are centred on the port in thickness (Y). Each body face starts `connector_gap` = 2 mm beyond the tablet edge, and the USB-C plug shell (8.4 × 2.6) reaches 6 mm into the port. These seated transforms are guesses: measure the plug shoulder, shell length and seating depth for each connector.
+
+| Parameter | Value | Source / status |
+|---|---|---|
+| `cd0700_body` | 12.7 (X out from the edge) × 8.9 (Y) × 49.3 (Z, along the edge) | CableCreation dimension image in the design brief (1.94 × 0.50 × 0.35 in); verify on the owned adapter |
+| CD0700 sockets | One at each Z end, facing up and down | Design brief |
+| `essager_body` | 12.7 × 6.3 × 16, plug centre 4 below its top, cable exits downward | Unmeasured placeholder |
+| `downstream_plug` | 12 × 8 × 24, outside the bay | Unmeasured placeholder for the CD0700's charging and audio plugs |
+| `essager_relief` | 6 × 6 × 20 below the elbow | Unmeasured placeholder |
+| `cable_d` | 5 | Cable diameter allowance |
+| `insert_clearance` | 0.5 | Pocket, plug hole, outlets and cover boss; fit variants 0.3 / 0.5 / 0.7 |
+
+The user's ~15 mm protrusion estimate is not used for any dimension.
+
+The insert wall between the tablet edge and the connector body is `connector_gap - clearance - insert_clearance`: 1.0 mm at default (0.8 mm at 0.7). It carries the USB-C extraction load. `validate()` rejects walls under 0.4 mm. Thicken it once the seated transform is measured.
+
+### Device features (placeholders)
+
+None of these positions is measured. They are keep-out references for the geometry checks, not evidence of clearance.
+
+| Parameter | Value |
+|---|---|
+| `camera` | Rear camera centre X=-110, Z=62 on the back face; view cone half-angle 35° (`camera_half_angle`), 250 mm long |
+| `front_camera` | X=0, Z=77 on the front face; same half-angle, 150 mm long |
+| `speaker_z`, `speaker_h` | Openings on both side edges at Z=±50, 16 high, 4 mm keep-out outward |
+| `control_x` | Keys on the top edge from X=-95 to -45, 10 mm keep-out above |
+
+Microphone openings are not modelled because no position is known.
+
+### Hardware
+
+| Item | Value | Note |
+|---|---|---|
+| Insert/cover bolts | 2 × M3 × 25 socket head, ISO 4032 M3 nuts | Stack is 22.1 mm; the bolt ends 2.9 mm behind the rear mount |
+| `m3` | 3.4 clearance hole, 5.8 across-flats nut pocket, 2.7 deep | Print allowances for ordinary M3 hardware (nut 5.5 AF × 2.4); verify on a coupon |
+
 `tablet_envelope()` is the nominal box with rounded outline corners. It has no edge profile, camera island or other protrusion because none is measured. Collision results depend on this envelope.
 
 ## Missing inputs
