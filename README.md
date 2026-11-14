@@ -23,6 +23,7 @@ OpenSCAD previews of the current model (provisional geometry, nominal tablet), i
 |---|---|
 | `cad/parameters.scad` | Every dimension, limit and clearance; provisional values are marked |
 | `cad/dock.scad` | Geometry, assembly poses, bed orientations and the `part` selector |
+| `export.py` | Regenerates every STL, clearance variant, preview and `manifest.json` |
 | `tests/geometry_checks.scad` | Spatial fixtures for allowed motion, forbidden motion and keep-outs |
 | `tests/test_geometry.py` | Runs OpenSCAD on each fixture and part |
 | `docs/measurements.md` | Source and status of each input; hardware; mass and lever arms |
@@ -58,17 +59,13 @@ Invalid values (out of range, off the pitch index, unknown `part` or `connector`
 
 ## Printed parts
 
-Export each part in its candidate bed orientation:
+Export every part in its candidate bed orientation, plus the 0.3 / 0.5 / 0.7 mm clearance variants of the inserts, cover and motion sample, previews and `manifest.json`:
 
 ```
-mkdir -p build/prototype
-for p in cradle cover mast_outer mast_inner bridge foot_yoke tape_foot; do
-  openscad --hardwarnings --export-format binstl -D "part=\"$p\"" -o build/prototype/$p.stl cad/dock.scad
-done
-for c in essager cd0700; do
-  openscad --hardwarnings --export-format binstl -D 'part="insert"' -D "connector=\"$c\"" -o build/prototype/insert_$c.stl cad/dock.scad
-done
+python3 export.py   # writes build/prototype/ (git-ignored); previews need xvfb-run
 ```
+
+Each STL must render without diagnostics, form one connected solid and rest on Z=0, or the script stops. `manifest.json` records the source revision (none if the tree is dirty), source hashes, OpenSCAD version, every `-D` override, and each STL's bounds and hash.
 
 | Part | Qty | Size on bed (mm) | Orientation |
 |---|---|---|---|
@@ -132,4 +129,4 @@ Tape: not selected. Choose the grade with its supplier for the printed surface a
 
 ## Handoff record
 
-With every delivered prototype, record: the source revision (`git rev-parse HEAD`), every `-D` override used for each STL, the measurement assumptions in docs/measurements.md, the hardware list, the filament grade and batch, printer, nozzle, layer height, walls, infill, orientation, supports and post-processing. Physical results go into docs/validation.md as pass, fail or UNRUN.
+With every delivered prototype, keep the `manifest.json` from `python3 export.py` (source revision, every `-D` override and hash per STL), and record the measurement assumptions in docs/measurements.md, the hardware list, the filament grade and batch, printer, nozzle, layer height, walls, infill, orientation, supports and post-processing. Physical results go into docs/validation.md as pass, fail or UNRUN.
