@@ -29,7 +29,8 @@ VIEWS = [
     ("release-top", "0,0,650,0,30,100", {"slide_mm": 8, "release_yaw_deg": 12}),
     ("high-pitch-up", "350,-500,300,0,65,160", {"height_mm": 50, "pitch_deg": 15}),
     ("high-pitch-down", "350,-500,300,0,65,160", {"height_mm": 50, "pitch_deg": -15}),
-    ("feet-angles", "380,500,290,0,65,130", {"foot_roll": [15, -15], "foot_pitch": [-15, 15]}),
+    ("low-pitch-down", "350,-500,300,0,40,40", {"pitch_deg": -15}),
+    ("feet-angles", "380,500,290,0,65,130", {"foot_roll": [15, -15, 15], "foot_pitch": [-15, 15, -15]}),
 ]
 
 

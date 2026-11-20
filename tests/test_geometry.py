@@ -29,7 +29,7 @@ POSES = [(hh, pp) for hh in (0, 25, 50) for pp in (-15, 0, 15)]
 # Foot (pitch, roll): neutral and the four corners; the other foot takes the opposite corner.
 FOOT_COMBOS = [(0, 0), (15, 15), (-15, -15), (15, -15), (-15, 15)]
 # Every printed piece, in its bed orientation: dock parts and fit/mechanism samples.
-PRINTABLE = [{"part": p} for p in ("cradle", "cover", "mast_outer", "mast_inner", "bridge", "foot_yoke",
+PRINTABLE = [{"part": p} for p in ("cradle", "end_cap", "cover", "post", "carriage", "bridge", "ballast_lid", "foot_yoke",
                                    "tape_foot", "motion_sample", "surrogate", "fit_sample", "slide_sample",
                                    "pitch_joint")]
 PRINTABLE += [{"part": "insert", "connector": k} for k in ("essager", "cd0700")]
@@ -241,9 +241,48 @@ class GeometryTest(unittest.TestCase):
                                                    for pp in range(-15, 16, 5)])
         self.assert_all_blocked("pitch_teeth_lock", [{"pitch": pp + d} for pp in (-15, 0, 15) for d in (-1, 1)])
 
-    def test_slide_overlap_at_max_height(self):
-        self.assertGreater(render(CHECKS, check="slide_overlap_at_max_height"), 0)
-        self.assert_rejected("mast slide overlap below min_overlap at full height", tablet_bottom_z=55)
+    def test_slide_engagement(self):
+        # The rail head reaches both ends of the carriage sleeve at zero and full height.
+        self.assert_all_blocked("slide_engagement", [{"height": hh, "probe": p} for hh in (0, 50) for p in (0, 1)])
+        self.assert_rejected("post too short for the pivot height", tablet_bottom_z=-40)
+
+    def test_tablet_below_pads(self):
+        # At the lowest height the tablet reaches pad_drop below the tape faces at every pitch index.
+        self.assert_all_blocked("tablet_below_pads", [{"pitch": pp} for pp in range(-15, 16, 5)])
+        # Negative control: 9 mm higher, the screen-up extreme no longer reaches below the tape.
+        self.assert_all_empty("tablet_below_pads", [{"pitch": 15, "tablet_bottom_z": -20}])
+
+    def test_dashboard_nose_keepout(self):
+        variants = [{"height": hh, "pitch": pp, "kind": "cd0700"} for hh, pp in POSES]
+        self.assert_all_empty("dashboard_nose_keepout", variants)
+        # Negative control: feet 8 mm further forward put the swept cradle into the keep-out.
+        self.assert_all_blocked("dashboard_nose_keepout", [{"pitch": -15, "kind": "cd0700", "foot_y": 100}])
+
+    def test_mechanism_hidden_front(self):
+        # Occupant view at the lowest height: post, carriage and base hide behind the tablet and housing.
+        self.assert_all_empty("mechanism_hidden_front", [{"pitch": pp} for pp in (-15, 0, 15)])
+        # Negative controls: at full height the base shows below the housing; a pivot 71 mm
+        # higher puts the fork above the tablet's top edge.
+        self.assert_all_blocked("mechanism_hidden_front", [{"height": 50}, {"pivot": [76, 80]}])
+
+    def test_housing_fit(self):
+        self.assert_all_empty("housing_fit", [{"kind": k} for k in KINDS])
+
+    def test_snaps_hold(self):
+        # No screws on the end cap, cover or insert: each must be stopped by its tongues.
+        variants = [{"probe": p} for p in range(4)] + [{"probe": p, "kind": k} for p in (4, 5) for k in KINDS]
+        self.assert_all_blocked("snaps_hold", variants)
+        # Negative control: without barbs the end cap and the cover pull straight off.
+        self.assert_all_empty("snaps_hold", [{"probe": p, "snap": [1.8, 5, 0, 0.3]} for p in (0, 2)])
+
+    def test_snaps_go_in(self):
+        # Every clipped part reaches its seat along one straight push, with the cables plugged in.
+        plain = {"snap": [1.8, 5, 0, 0.3], "lid_fit": [1.2, 0.3, 0]}
+        variants = [dict(plain, probe=p, fraction=f / 5, kind=k) for p in (0, 1) for f in range(1, 6) for k in KINDS]
+        variants += [dict(plain, probe=2, fraction=f / 5) for f in range(1, 6)]
+        self.assert_all_empty("snaps_go_in", variants)
+        # Negative control: with barbs and bump the rigid shapes do not pass, so the path is really swept.
+        self.assert_all_blocked("snaps_go_in", [{"probe": p, "fraction": 0.2} for p in (0, 1, 2)])
 
     def test_support_and_cable_clearance_at_extremes(self):
         base = [{"height": hh, "pitch": pp, "kind": "cd0700"} for hh, pp in POSES]
@@ -255,17 +294,20 @@ class GeometryTest(unittest.TestCase):
         variants = [{"height": hh, "pitch": pp, "kind": "cd0700"} for hh, pp in POSES]
         self.assert_all_empty("support_fasteners_clear", variants)
         self.assert_all_empty("support_fasteners_bearing", [{"height": hh} for hh in (0, 50)])
+        # One bolt size: the old 30 mm rail head made the sleeve wider than an M5 x 35 reaches.
+        self.assert_rejected("too wide for the standard M5 bolt", tongue=[30, 18])
 
     def test_support_parts_export(self):
-        for name in ("mast_outer", "mast_inner", "pitch_joint", "slide_sample"):
+        for name in ("post", "carriage", "pitch_joint", "slide_sample"):
             with self.subTest(part=name):
                 self.assertGreater(render(DOCK, part=name), 0)
 
     def test_two_axis_foot_adjustment(self):
-        for defines in ({"foot_pitch": [16, 0]}, {"foot_roll": [0, -16]}):
+        for defines in ({"foot_pitch": [16, 0, 0]}, {"foot_roll": [0, 0, -16]}):
             with self.subTest(**defines):
                 self.assert_rejected("foot angles out of range", **defines)
-        contact = [{"foot_side": s, "fpitch": p, "froll": r} for s in (-1, 1) for p, r in FOOT_COMBOS]
+        self.assert_rejected("take [left, right, rear]", foot_pitch=[0, 0])
+        contact = [{"foot_side": s, "fpitch": p, "froll": r} for s in (-1, 1, 0) for p, r in FOOT_COMBOS]
         self.assert_all_empty("foot_contact", contact)
         self.assert_all_empty("foot_joints_clear", [{"fpitch": p, "froll": r} for p, r in FOOT_COMBOS])
 
@@ -277,6 +319,16 @@ class GeometryTest(unittest.TestCase):
         self.assert_all_empty("foot_clamps_tool_access", [{"fpitch": p, "froll": r} for p, r in FOOT_COMBOS])
         self.assert_all_empty("foot_clamps_bearing", [{"fpitch": p, "froll": r} for p, r in FOOT_COMBOS[:2]])
 
+    def test_ballast_fit(self):
+        self.assert_all_empty("ballast_fit", [{}])
+        # Negative control: weights 1 mm larger per face than the stated inside do not fit.
+        # The lid cannot lift (probe 1) or slide back out (probe 2).
+        self.assert_all_blocked("ballast_fit", [{"grow": 1}, {"probe": 1}, {"probe": 2}])
+        # Negative controls: upright lips let the lid lift; without the bump it slides out.
+        self.assert_all_empty("ballast_fit", [{"probe": 1, "lid_fit": [2.5, 0.3, 0.6]}, {"probe": 2, "lid_fit": [1.2, 0.3, 0]}])
+        # A tail too short would put the tray over the front pads.
+        self.assert_rejected("rear_reach too short", rear_reach=80)
+
     def test_base_clears_removal_envelope(self):
         base = [{"height": hh, "pitch": pp, "kind": "cd0700"} for hh, pp in POSES]
         variants = [dict(v, stage=s) for v in base for s in ("slide", "lift")]
@@ -287,7 +339,7 @@ class GeometryTest(unittest.TestCase):
         self.assert_all_empty("base_clears_removal_envelope", variants)
 
     def test_base_parts_export(self):
-        for name in ("bridge", "foot_yoke", "tape_foot"):
+        for name in ("bridge", "ballast_lid", "foot_yoke", "tape_foot"):
             with self.subTest(part=name):
                 self.assertGreater(render(DOCK, part=name), 0)
 

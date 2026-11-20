@@ -121,3 +121,39 @@ No adjustable articulated arm, powered mechanism, separate release button, case-
 ## Review boundary
 
 This document consolidates the agreed concept and identifies the evidence needed to turn it into printable geometry. It does not claim completed CAD, universal dashboard compatibility, damage-free adhesive removal, or qualified thermal/vibration performance. Crash retention is not designed or tested; in a collision the tablet or dock may detach and strike occupants. After user review of this written spec, prepare an implementation plan that starts with the unresolved geometry and small fit/mechanism prototypes.
+
+## Revision 2026-11-19: low placement and OEM-style housing
+
+The user added three requirements after reviewing the first CAD candidate:
+
+1. At the lowest height setting the tablet's bottom edge must sit below the tape faces of the feet, so the screen is as low as vent airflow allows and blocks as little of the road ahead as possible.
+2. The tablet must sit further toward the occupants so that, at the lowest height and especially at -15° pitch, it does not run into the feet or the dashboard under them.
+3. The dock needs an external housing that looks OEM: smooth edges, mechanisms hidden from the front and sides. What is behind the tablet may stay visible.
+
+Consequences for the concept:
+
+- The first candidate's telescoping mast put the pitch axis about 143 mm above the tape faces at zero height, because the collapsed slide (50 mm travel plus overlap) sat under the fork. With the tablet's bottom below the tape, the fork would have stood about 26 mm above the tablet's top edge, in the occupant view. The height slide therefore moves behind the tablet: a short fixed post carries the pitch fork, the pitch carriage carries a sleeve, and a keyed rail on the cradle spine slides in that sleeve. The support is still one central member, keyed against twist, clamped by one metal bolt and supported on both sides of the pitch joint.
+- Height travel now runs along the cradle's own vertical, which tilts with pitch (at ±15° the 50 mm travel is 48.3 mm vertical and 12.9 mm fore/aft).
+- The base stands behind the cradle's swept envelope. Below the tape plane nothing may come closer than a dashboard-nose allowance to the pads' front edge.
+- The housing is a rounded surround on the front and sides with an open back. It cannot cover the front of the screen beyond the existing lip and hooks, or the top edge between the corner roofs, without blocking the slide, tilt and lift removal path. The tablet's top edge therefore stays exposed. The right end cap comes off for connector access.
+
+These are design decisions to be checked with the same physical evidence listed above, not qualification.
+
+## Revision 2026-11-20: rear foot and weights
+
+With the screen hanging ahead of the front feet, the dock's centre of mass lies in front of its tape footprint, so the tape was pulled upward permanently. The user chose a third foot and/or ballast, and ruled out bracing against the windshield or fixing to car-specific points (speaker grilles, vents): the dock is meant to fit any car, and some dashboards are very deep.
+
+- A tail behind the bridge carries a third standard foot toward the windshield and a lidded weight tray beside it. The tail length is a parameter because dashboard depth varies.
+- Weights in the tray cancel the pull on the rear foot's tape; the amount is set by a balance check with the real parts, not by calculation.
+- Weights added after printing cost less than printed length or printed mass. The default tail is therefore short, the tray is sized for more weight, and no printed part is meant to act as weight.
+- Without weights the dock still works as a three-footed base, with a smaller constant pull on the rear tape.
+- The base now follows the dashboard's slope from front to rear. The screen angle is corrected with the pitch index.
+
+## Revision 2026-11-20: one bolt size, no other screws
+
+The user asked for fewer hardware variants, then for no screws wherever the plastic's own springiness can do the job.
+
+- Metal bolts stay on structural adjustment clamps (height, pitch, foot pivots), as this brief already requires. A clamp needs constant force, and plastic under constant stress relaxes in a hot car.
+- All eight clamp bolts are the same M5 × 35. The rail head narrowed from 30 to 21 mm so the height clamp takes it.
+- Joints that are never adjusted have no screws: the post prints as part of the bridge; the connector cover and the end cap clip on with printed tongues that are relaxed once seated; the tray lid slides under lips.
+- Not done: screw-free feet (plain pins would work once all three pads are bonded, but a debonded pad would then let the base fold) and tool-free height and pitch locks. Both change how the dock behaves and need the user's decision.

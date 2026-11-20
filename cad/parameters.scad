@@ -58,8 +58,10 @@ insert_clearance = 0.5;          // body pocket, plug hole, outlets and cover bo
 insert_wall = 1.6;               // insert front and back walls around the thickest body
 bay_w = 23;                      // bay width from the tablet edge (X)
 mount_t = 5;                     // rear mount thickness behind the insert
-m3 = [3.4, 5.8, 2.7];            // M3 clearance hole, nut pocket across flats, pocket depth
-m3_bolt_x = 19.5;                // insert/cover bolt X from the tablet edge
+// Printed snap tongues hold the cover and the end cap; no screws. A tongue is relaxed once seated.
+snap = [1.8, 5, 1.1, 0.3];       // tongue thickness (Z, the bending direction), width (X), barb height, window clearance
+snap_x = 19;                     // cover tongue X from the tablet edge
+snap_end = [4.2, 4.4];           // tongue centres beyond the CD0700 body ends (Z), bay ends beyond the tongue centres
 
 // ---- Device feature placeholders (PROVISIONAL; measure the tablet) ----
 camera = [-110, 62];             // rear camera centre X, Z
@@ -70,42 +72,66 @@ speaker_h = 16;                  // speaker opening height
 control_x = [-95, -45];          // power and volume keys on the top edge
 
 // ---- Central support (PROVISIONAL; installation height and viewing angle unmeasured) ----
-height_travel = 50;        // locked height range
+// A short fixed post carries the pitch fork; the height slide sits behind the tablet, between
+// the pitch carriage and a rail on the cradle, so the screen can hang below the tape faces.
+height_travel = 50;        // locked height range, along the cradle's own vertical (tilts with pitch)
 pitch_range = 15;          // ± locked pitch about the nominal angle
 pitch_step = 5;            // face-tooth index
 nominal_pitch = 0;         // installed screen pitch at pitch_deg = 0; vertical until measured
-tablet_bottom_z = 70;      // tablet bottom above the pad plane at zero height and pitch
-pivot = [55, -10];         // pitch axis: Y behind the tablet, Z from the tablet centre (cradle frame)
-lug_t = 12;                // cradle lug thickness (X)
-lug_r = 30;                // cradle lug radius
-cheek_t = 8;               // mast fork cheek thickness
+tablet_bottom_z = -29;     // tablet bottom above the pad plane at zero height and pitch; lower limit is vent flow (unmeasured)
+pad_drop = 5;              // the tablet's lowest point must sit this far below the pad plane at zero height, every pitch
+pivot = [76, 9];           // pitch axis: Y behind the tablet, Z above the tablet centre at zero height (cradle frame)
+lug_t = 12;                // carriage lug thickness (X)
+lug_r = 30;                // carriage lug radius
+cheek_t = 8;               // post fork cheek thickness
 cheek_r = 32;              // fork cheek radius
 teeth_r = [18, 28];        // face-tooth annulus on the lug and the +X cheek
 teeth_play = 0.2;          // axial play at an index; about 0.4 to 0.6 degrees of rotational play
-tongue = [30, 18];         // inner mast section X, Y
-slide_gap = 0.3;           // per side between tongue and sleeve
-sleeve_wall = [6, 4];       // side walls (X; carry the clamp nut), front and back walls (Y)
-bridge_top = 18;           // mast flange seat above the pad plane
-flange = [70, 50, 5];      // mast flange X, Y, Z
-min_overlap = 25;          // retained slide overlap at full height
+tongue = [21, 18];         // height rail head on the cradle, X × Y; X keeps the sleeve inside the M5 bolt length
+rail_web = 10;             // web joining the rail head to the spine (X)
+carriage_h = 60;           // carriage sleeve length along the rail, centred on the pivot
+slide_gap = 0.3;           // per side between rail head and sleeve
+sleeve_wall = [6, 4];      // side walls (X; carry the clamp nut), front lips and back wall (Y)
+bridge_top = 18;           // bridge plate top, where the post stands, above the pad plane
+flange = [70, 50, 5];      // post flange X, Y, Z
+flange_front = 14;         // flange front edge ahead of the pitch axis (Y); clears the cradle at -15 degrees
+min_overlap = 25;          // retained slide engagement at both ends of the travel
 m5 = [5.6, 8.4, 4.4, 8.5, 5]; // clearance hole, nut pocket across flats, pocket depth, head diameter, head height
+m5_len = 35;               // the only purchased screw: every adjustment clamp takes this M5 length
 washer5 = [10, 1];         // M5 washer OD, thickness
 
-// ---- Standard base: bridge and two identical tape feet (PROVISIONAL; no dashboard measured) ----
+// ---- Standard base: bridge and three identical tape feet (PROVISIONAL; no dashboard measured) ----
 foot_spacing = 140;        // between the feet's pivot centres (X)
-foot_y = 45;               // feet centre line (installed Y)
+foot_y = 108;              // feet centre line (installed Y), behind the swept cradle
 pad = [50, 70, 6];         // flat tape pad X, Y, thickness
 pad_r = 8;                 // pad corner radius
 pad_offset = 10;           // pad centre outboard of its pivots, so a tilted pad passes under the bridge arms
-foot_pitch = [0, 0];       // [left, right] about X; + raises the pad's inward (+Y) edge
-foot_roll = [0, 0];        // [left, right] about Y; + lowers the pad's occupant-right (+X) edge
+foot_pitch = [0, 0, 0];    // [left, right, rear] about X; + raises the pad's inward (+Y) edge
+foot_roll = [0, 0, 0];     // [left, right, rear] about Y; + lowers the pad's occupant-right (+X) edge
 foot_range = 15;           // ± per axis
 pivot_a_z = 19;            // lower foot pivot (axis X) above the pad plane
 pivot_b_z = 40;            // upper foot pivot (axis Y) above the pad plane
 foot_lug = 16;             // lug thickness between cheeks
 foot_gap = 1;              // washer gap each side of a lug
 foot_cheek = 6;            // cheek thickness
-bridge = [70, 54, 8];      // plate under the mast flange X, Y, Z; top at bridge_top
+bridge = [70, 63, 8];      // plate X, Y (from the flange front back past the foot pivots), Z; top at bridge_top
+nose_gap = 10;             // dashboard nose allowance: nothing below the pad plane within this of the pads' front edge
+// The screen hangs ahead of the front feet, so the dock tips forward. A tail carries a third foot
+// and a weight tray toward the windshield: the weights cancel the pull on the rear tape.
+// Weights are cheaper than printed length, so the tail is short and the tray roomy; no printed
+// part is meant to act as weight.
+rear_reach = 150;          // rear foot behind the front feet (Y); longer needs fewer weights
+tail_w = 20;               // tail beam width (X), on the centre line from the bridge plate to the tray
+ballast = [100, 80, 20];   // weight tray inside X, Y, Z, beside the rear foot
+ballast_wall = 2.5;        // tray walls, floor and lid
+lid_fit = [1.2, 0.3, 0.6]; // sliding lid: lip foot on the rim, running clearance, detent bump height
+
+// ---- Housing: OEM-style surround on the front and sides; the back stays open (PROVISIONAL) ----
+shell_t = 2.5;             // wall thickness
+shell_gap = 0.5;           // gap from the shell to the cradle, cover and hooks it hides
+shell_r = [14, 4];         // corner radius seen from the front, edge round on the front and back edges
+hook_chamfer = 9;          // outer corners of the right hooks, so they stay inside the rounded corners
+cap_snap = [15, 74];       // end cap snap tongues: X from the tablet edge, ±Z through the right hooks
 
 // ---- Print service ----
 build_volume = [0, 0, 0];  // usable ABS volume X, Y, Z; 0 = not yet supplied, fit unverified
